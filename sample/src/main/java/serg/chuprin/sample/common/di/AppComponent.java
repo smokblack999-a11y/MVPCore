@@ -10,7 +10,7 @@ import serg.chuprin.sample.users.info.di.UserModule;
 import serg.chuprin.sample.users.list.di.UsersListComponent;
 import serg.chuprin.sample.users.list.di.UsersListModule;
 
-@Component
+@Component(modules = AppModule.class)
 @Singleton
 public interface AppComponent {
 
