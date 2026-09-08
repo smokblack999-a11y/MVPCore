@@ -1,9 +1,9 @@
 apply plugin: 'java'
 
 ext.artifactId = 'mvp-core'
-apply from: '../bintray/install.gradle'
-apply from: '../bintray/bintray.gradle'
 
+// Legacy Bintray/Maven publishing scripts were removed from the build path.
+// They depended on discontinued plugins and prevented CI from compiling the library.
 apply from: '../bintray/local_publication.gradle'
 
 dependencies {
