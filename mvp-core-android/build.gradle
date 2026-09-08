@@ -1,10 +1,9 @@
 apply plugin: 'java'
 
 ext.artifactId = 'mvp-core-android'
-apply from: '../bintray/install.gradle'
-apply from: '../bintray/bintray.gradle'
 
-apply from: '../bintray/local_publication.gradle'
+// Publishing integrations removed: Bintray and the legacy install plugin are obsolete.
+// Local Maven publication is not required for CI compilation.
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
