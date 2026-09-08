@@ -2,9 +2,8 @@ apply plugin: 'java'
 
 ext.artifactId = 'mvp-core'
 
-// Legacy Bintray/Maven publishing scripts were removed from the build path.
-// They depended on discontinued plugins and prevented CI from compiling the library.
-apply from: '../bintray/local_publication.gradle'
+// Publishing is intentionally not applied during the library build.
+// The former Bintray/Android-Maven plugins are discontinued and broke CI.
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
