@@ -1,31 +1,4 @@
-apply plugin: 'com.jfrog.bintray'
+// Legacy Bintray publishing script intentionally disabled.
+// Bintray was sunset and this project no longer publishes through it.
+// Keep this file as a no-op so old local commands that still apply it do not break the build.
 
-Properties properties = new Properties()
-properties.load(project.rootProject.file('local.properties').newDataInputStream())
-
-version = ext.libVersion
-
-task sourcesJar(type: Jar) {
-    from sourceSets.main.allSource
-    classifier = 'sources'
-}
-
-artifacts {
-    archives sourcesJar
-}
-
-bintray {
-    user = properties.getProperty("bintray.user")
-    key = properties.getProperty("bintray.apikey")
-
-    configurations = ['archives']
-    pkg {
-        repo = 'maven'
-        name = artifactId
-        websiteUrl = 'https://github.com/creati8e/MVPCore'
-        vcsUrl = 'https://github.com/creati8e/MVPCore.git'
-        licenses = ["Apache-2.0"]
-        publish = true
-        publicDownloadNumbers = true
-    }
-}
