@@ -1,37 +1,3 @@
-apply plugin: 'com.github.dcendents.android-maven'
+// Legacy Android-Maven install script intentionally disabled.
+// Publication is not part of the CI build.
 
-group = 'serg.chuprin'
-
-install {
-    repositories.mavenInstaller {
-        pom {
-            project {
-                packaging 'jar'
-                groupId 'serg.chuprin'
-                artifactId artifactId
-
-                name 'MvpCore'
-                url 'https://gitlab.com/creati8e/MvpCore'
-
-                licenses {
-                    license {
-                        name 'The Apache Software License, Version 2.0'
-                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                    }
-                }
-                developers {
-                    developer {
-                        id 'creati8e'
-                        name 'Sergey chuprin'
-                        email 'gregamer@gmail.com'
-                    }
-                }
-                scm {
-                    connection 'https://github.com/creati8e/MVPCore.git'
-                    developerConnection 'https://github.com/creati8e/MVPCore.git'
-                    url 'https://github.com/creati8e/MVPCore'
-                }
-            }
-        }
-    }
-}
