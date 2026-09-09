@@ -29,14 +29,16 @@ import serg.chuprin.mvp_core.annotations.InjectViewState;
 import serg.chuprin.mvp_core.view.MvpView;
 
 /**
- * Really we don't need to @Inject annotation support.
- * This is a little workaround for case when there is no @InjectViewState annotation,
- * but we need to generate ViewStateProvider anyway.
- * It's assumed that Mvp-core can't be used without dagger, so @Inject annotation always present.
+ * Generates MVPCore ViewState/ViewStateProvider sources.
+ *
+ * Important: this processor must not claim javax.inject.Inject. Dagger's
+ * ComponentProcessor also consumes javax.inject annotations, so claiming them
+ * here prevents Dagger from receiving the annotations it needs to generate
+ * Dagger* component implementations.
  */
 @AutoService(Processor.class)
 @SuppressWarnings("WeakerAccess")
-@SupportedAnnotationTypes({"serg.chuprin.mvp_core.annotations.InjectViewState", "javax.inject.Inject"})
+@SupportedAnnotationTypes("serg.chuprin.mvp_core.annotations.InjectViewState")
 public class MvpProcessor extends AbstractProcessor {
 
     private static Messager messager;
@@ -54,10 +56,11 @@ public class MvpProcessor extends AbstractProcessor {
     }
 
     private static void message(Diagnostic.Kind kind, Element element, String message, Object... args) {
-        messager.printMessage(
-                kind,
-                String.format(message, args),
-                element);
+        if (element == null) {
+            messager.printMessage(kind, String.format(message, args));
+        } else {
+            messager.printMessage(kind, String.format(message, args), element);
+        }
     }
 
     @Override
@@ -182,7 +185,7 @@ public class MvpProcessor extends AbstractProcessor {
             for (TypeMirror bound : typeParam.getBounds()) {
 
                 Element possibleViewType = typeUtils.asElement(bound);
-                if (possibleViewType.toString().contains(MvpView.class.getName())) {
+                if (possibleViewType != null && possibleViewType.toString().contains(MvpView.class.getName())) {
                     return (TypeElement) possibleViewType;
                 }
             }
@@ -195,6 +198,7 @@ public class MvpProcessor extends AbstractProcessor {
      * @return TypeElement for View : MvpView or null if not found
      */
     private TypeElement getViewFromPresenterSuperclassTypeArg(TypeElement presenter) {
+
         DeclaredType superclass = (DeclaredType) presenter.getSuperclass();
 
         for (TypeMirror arg : superclass.getTypeArguments()) {
