@@ -23,6 +23,12 @@ android {
     }
 }
 
+gradle.projectsEvaluated {
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-Xmaxerrs" << "500"
+    }
+}
+
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "com.android.support:design:$supportVersion"
@@ -32,9 +38,9 @@ dependencies {
     implementation project(':mvp-core-android')
     annotationProcessor project(':mvp-core-processor')
 
-    //dagger
-    implementation 'com.google.dagger:dagger:2.25.2'
-    annotationProcessor 'com.google.dagger:dagger-compiler:2.25.2'
+    // Dagger: keep runtime and compiler versions identical.
+    implementation 'com.google.dagger:dagger:2.28.3'
+    annotationProcessor 'com.google.dagger:dagger-compiler:2.28.3'
 
     //rx
     implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'
