@@ -26,6 +26,7 @@ public class MediaHubActivity extends AppCompatActivity {
     private static final int PICK_PHOTO = 52;
 
     private static final String STATE_PHOTO = "media.photo";
+    private static final String STATE_PHOTO_PATH = "media.photo.path";
     private static final String STATE_LAT = "media.lat";
     private static final String STATE_LON = "media.lon";
     private static final String STATE_ACC = "media.acc";
@@ -33,6 +34,7 @@ public class MediaHubActivity extends AppCompatActivity {
 
     private TextView status;
     private Uri pendingPhoto;
+    private String pendingPhotoPath;
     private LocationSnapshot location;
 
     @Override protected void onCreate(@Nullable Bundle state) {
@@ -57,6 +59,7 @@ public class MediaHubActivity extends AppCompatActivity {
 
     private void restoreState(Bundle state) {
         pendingPhoto = state.getParcelable(STATE_PHOTO);
+        pendingPhotoPath = state.getString(STATE_PHOTO_PATH);
         if (state.containsKey(STATE_LAT) && state.containsKey(STATE_LON)) {
             location = new LocationSnapshot(
                     state.getDouble(STATE_LAT),
@@ -68,6 +71,7 @@ public class MediaHubActivity extends AppCompatActivity {
 
     @Override protected void onSaveInstanceState(Bundle out) {
         if (pendingPhoto != null) out.putParcelable(STATE_PHOTO, pendingPhoto);
+        if (pendingPhotoPath != null) out.putString(STATE_PHOTO_PATH, pendingPhotoPath);
         if (location != null) {
             out.putDouble(STATE_LAT, location.latitude);
             out.putDouble(STATE_LON, location.longitude);
@@ -93,6 +97,7 @@ public class MediaHubActivity extends AppCompatActivity {
             String name = new SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
                     .format(new Date()) + ".jpg";
             File file = new File(dir, name);
+            pendingPhotoPath = file.getAbsolutePath();
             pendingPhoto = FileProvider.getUriForFile(
                     this, getPackageName() + MediaHubContract.AUTHORITY_SUFFIX, file);
 
@@ -102,6 +107,7 @@ public class MediaHubActivity extends AppCompatActivity {
             startActivityForResult(intent, TAKE_PHOTO);
         } catch (Exception e) {
             pendingPhoto = null;
+            pendingPhotoPath = null;
             updateStatus("Camera error: " + e.getMessage());
         }
     }
@@ -168,6 +174,7 @@ public class MediaHubActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == PICK_PHOTO && resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
             pendingPhoto = data.getData();
+            pendingPhotoPath = null;
             try {
                 int takeFlags = data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION;
                 if (takeFlags != 0) getContentResolver().takePersistableUriPermission(pendingPhoto, takeFlags);
@@ -178,9 +185,12 @@ public class MediaHubActivity extends AppCompatActivity {
 
         if (requestCode == TAKE_PHOTO) {
             if (resultCode == Activity.RESULT_OK && pendingPhoto != null) {
-                File photoFile = new File(new File(getCacheDir(), MediaHubContract.CACHE_DIR),
-                        new File(pendingPhoto.getPath() == null ? "" : pendingPhoto.getPath()).getName());
-                ExifLocationWriter.write(photoFile.getAbsolutePath(), location);
+                if (pendingPhotoPath != null) {
+                    File photoFile = new File(pendingPhotoPath);
+                    if (photoFile.isFile() && photoFile.length() > 0L) {
+                        ExifLocationWriter.write(photoFile.getAbsolutePath(), location);
+                    }
+                }
                 updateStatus(location == null ? "Photo ready" : "Photo ready • GPS: " + location.format());
             } else {
                 updateStatus("Photo capture cancelled");
