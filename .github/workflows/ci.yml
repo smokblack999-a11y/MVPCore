@@ -35,8 +35,14 @@ jobs:
           java -version
           ./gradlew --version
 
-      - name: Build
+      - name: Build and test
         run: ./gradlew clean build --stacktrace --warning-mode all
+
+      - name: Assemble sample debug APK
+        run: ./gradlew :sample:assembleDebug --stacktrace
+
+      - name: Verify sample debug APK
+        run: test -s sample/build/outputs/apk/debug/sample-debug.apk
 
       - name: Upload build outputs
         if: always()
