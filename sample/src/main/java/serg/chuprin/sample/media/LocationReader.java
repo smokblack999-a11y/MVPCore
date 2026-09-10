@@ -7,9 +7,13 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.v4.app.ActivityCompat;
 
 public final class LocationReader {
+    private static final long SINGLE_UPDATE_TIMEOUT_MS = 12000L;
+
     private final Context context;
     private final LocationManager manager;
 
@@ -19,10 +23,7 @@ public final class LocationReader {
     }
 
     public LocationSnapshot lastKnown() {
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return null;
-        }
+        if (!hasLocationPermission()) return null;
         Location best = null;
         String[] providers = {LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER};
         for (String provider : providers) {
@@ -31,29 +32,55 @@ public final class LocationReader {
                 if (candidate != null && (best == null || candidate.getTime() > best.getTime())) best = candidate;
             } catch (SecurityException ignored) { }
         }
-        return best == null ? null : new LocationSnapshot(best.getLatitude(), best.getLongitude(), best.hasAccuracy() ? best.getAccuracy() : Float.NaN, best.getTime());
+        return toSnapshot(best);
     }
 
     public void requestSingle(final Callback callback) {
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (!hasLocationPermission()) {
             callback.onLocation(null);
             return;
         }
+
+        final Handler handler = new Handler(Looper.getMainLooper());
+        final LocationListener listener = new LocationListener() {
+            private boolean delivered;
+
+            private void deliver(Location location) {
+                if (delivered) return;
+                delivered = true;
+                try { manager.removeUpdates(this); } catch (SecurityException ignored) { }
+                callback.onLocation(toSnapshot(location));
+            }
+
+            @Override public void onLocationChanged(Location location) { deliver(location); }
+            @Override public void onStatusChanged(String provider, int status, Bundle extras) { }
+            @Override public void onProviderEnabled(String provider) { }
+            @Override public void onProviderDisabled(String provider) { }
+        };
+
         try {
-            manager.requestSingleUpdate(LocationManager.GPS_PROVIDER, new LocationListener() {
-                @Override public void onLocationChanged(Location location) { callback.onLocation(toSnapshot(location)); }
-                @Override public void onStatusChanged(String provider, int status, Bundle extras) { }
-                @Override public void onProviderEnabled(String provider) { }
-                @Override public void onProviderDisabled(String provider) { }
-            }, null);
+            manager.requestSingleUpdate(LocationManager.GPS_PROVIDER, listener, Looper.getMainLooper());
+            handler.postDelayed(() -> {
+                try { manager.removeUpdates(listener); } catch (SecurityException ignored) { }
+                LocationSnapshot fallback = lastKnown();
+                callback.onLocation(fallback);
+            }, SINGLE_UPDATE_TIMEOUT_MS);
         } catch (Exception e) {
             callback.onLocation(lastKnown());
         }
     }
 
+    private boolean hasLocationPermission() {
+        return ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                || ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
     private LocationSnapshot toSnapshot(Location l) {
-        return l == null ? null : new LocationSnapshot(l.getLatitude(), l.getLongitude(), l.hasAccuracy() ? l.getAccuracy() : Float.NaN, l.getTime());
+        return l == null ? null : new LocationSnapshot(
+                l.getLatitude(),
+                l.getLongitude(),
+                l.hasAccuracy() ? l.getAccuracy() : Float.NaN,
+                l.getTime());
     }
 
     public interface Callback { void onLocation(LocationSnapshot snapshot); }
