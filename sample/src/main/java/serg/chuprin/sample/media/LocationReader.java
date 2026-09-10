@@ -42,12 +42,12 @@ public final class LocationReader {
         }
 
         final Handler handler = new Handler(Looper.getMainLooper());
+        final boolean[] delivered = {false};
         final LocationListener listener = new LocationListener() {
-            private boolean delivered;
-
             private void deliver(Location location) {
-                if (delivered) return;
-                delivered = true;
+                if (delivered[0]) return;
+                delivered[0] = true;
+                handler.removeCallbacksAndMessages(null);
                 try { manager.removeUpdates(this); } catch (SecurityException ignored) { }
                 callback.onLocation(toSnapshot(location));
             }
@@ -61,9 +61,10 @@ public final class LocationReader {
         try {
             manager.requestSingleUpdate(LocationManager.GPS_PROVIDER, listener, Looper.getMainLooper());
             handler.postDelayed(() -> {
+                if (delivered[0]) return;
+                delivered[0] = true;
                 try { manager.removeUpdates(listener); } catch (SecurityException ignored) { }
-                LocationSnapshot fallback = lastKnown();
-                callback.onLocation(fallback);
+                callback.onLocation(lastKnown());
             }, SINGLE_UPDATE_TIMEOUT_MS);
         } catch (Exception e) {
             callback.onLocation(lastKnown());
