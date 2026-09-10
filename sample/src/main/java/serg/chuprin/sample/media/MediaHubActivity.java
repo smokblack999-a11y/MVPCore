@@ -11,7 +11,6 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
-import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -23,7 +22,6 @@ import java.util.Locale;
 public class MediaHubActivity extends AppCompatActivity {
     private static final int REQ_CAMERA = 41;
     private static final int REQ_LOCATION = 42;
-    private static final int REQ_GALLERY = 43;
     private static final int TAKE_PHOTO = 51;
     private static final int PICK_PHOTO = 52;
 
@@ -92,13 +90,17 @@ public class MediaHubActivity extends AppCompatActivity {
         else status.setText("Take or select a photo first");
     }
 
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == REQ_CAMERA && results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) takePhoto();
+        if (requestCode == REQ_LOCATION && results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) refreshLocation();
+    }
+
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode != Activity.RESULT_OK) return;
         if (requestCode == PICK_PHOTO && data != null) pendingPhoto = data.getData();
         if (requestCode == TAKE_PHOTO && pendingPhoto != null) {
-            String path = new File(getCacheDir(), "media").getAbsolutePath() + "/" + pendingPhoto.getLastPathSegment();
-            // FileProvider URI does not expose the filename reliably; EXIF is best-effort via direct cache scan.
             File dir = new File(getCacheDir(), "media");
             File[] files = dir.listFiles();
             if (files != null && files.length > 0) {
