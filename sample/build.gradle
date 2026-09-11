@@ -26,6 +26,10 @@ android {
 gradle.projectsEvaluated {
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xmaxerrs" << "500"
+        // Keep both processors explicitly in the legacy AGP 3.5 toolchain.
+        // This prevents processor discovery/order differences from hiding
+        // Dagger's generated component sources behind the custom processor.
+        options.compilerArgs << "-processor" << "serg.chuprin.mvp_core.processor.MvpProcessor,dagger.internal.codegen.ComponentProcessor"
     }
 }
 
