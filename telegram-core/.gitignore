@@ -1,0 +1,14 @@
+# Runtime/session data
+sessions/
+*.session
+*.session-journal
+*.log
+
+# Local secrets
+.env
+.env.*
+
+# Build
+.gradle/
+build/
+out/
