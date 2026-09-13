@@ -41,6 +41,7 @@ public final class TdTelegramClient implements TelegramClient, TelegramAuth {
         this.receiver = new Thread(this::receiveLoop, "telegram-tdlib-receiver");
         this.receiver.setDaemon(true);
         this.receiver.start();
+        startAuthorization();
     }
 
     @Override public CompletableFuture<AuthState> getAuthState() {
@@ -48,6 +49,7 @@ public final class TdTelegramClient implements TelegramClient, TelegramAuth {
     }
 
     @Override public CompletableFuture<AuthState> login() {
+        startAuthorization();
         return CompletableFuture.completedFuture(authState);
     }
 
@@ -81,39 +83,46 @@ public final class TdTelegramClient implements TelegramClient, TelegramAuth {
         JsonObject formatted = new JsonObject();
         formatted.addProperty("@type", "formattedText");
         formatted.addProperty("text", text == null ? "" : text);
+        formatted.add("entities", new com.google.gson.JsonArray());
         JsonObject content = new JsonObject();
         content.addProperty("@type", "inputMessageText");
         content.add("text", formatted);
         JsonObject args = new JsonObject();
         args.addProperty("chat_id", chatId);
-        args.addProperty("reply_to", null);
-        args.addProperty("options", new JsonObject());
-        args.addProperty("reply_markup", null);
+        args.add("reply_to", com.google.gson.JsonNull.INSTANCE);
+        args.add("options", new JsonObject());
+        args.add("reply_markup", com.google.gson.JsonNull.INSTANCE);
         args.add("input_message_content", content);
         return send("sendMessage", args).thenApply(MessageDecoder::decode);
     }
 
     @Override public CompletableFuture<Message> sendPhoto(long chatId, String filePath, String caption) {
+        File file = new File(filePath);
+        if (!file.isFile() || !file.canRead()) {
+            return failed(new IllegalArgumentException("Photo file is not readable: " + file.getAbsolutePath()));
+        }
+
         JsonObject local = new JsonObject();
         local.addProperty("@type", "inputFileLocal");
-        local.addProperty("path", new File(filePath).getAbsolutePath());
+        local.addProperty("path", file.getAbsolutePath());
 
         JsonObject photo = new JsonObject();
         photo.addProperty("@type", "inputMessagePhoto");
         photo.add("photo", local);
-        photo.addProperty("added_sticker_file_ids", new long[0]);
+        photo.add("added_sticker_file_ids", new com.google.gson.JsonArray());
         photo.addProperty("width", 0);
         photo.addProperty("height", 0);
         JsonObject captionJson = new JsonObject();
         captionJson.addProperty("@type", "formattedText");
         captionJson.addProperty("text", caption == null ? "" : caption);
+        captionJson.add("entities", new com.google.gson.JsonArray());
         photo.add("caption", captionJson);
 
         JsonObject args = new JsonObject();
         args.addProperty("chat_id", chatId);
-        args.addProperty("reply_to", null);
-        args.addProperty("options", new JsonObject());
-        args.addProperty("reply_markup", null);
+        args.add("reply_to", com.google.gson.JsonNull.INSTANCE);
+        args.add("options", new JsonObject());
+        args.add("reply_markup", com.google.gson.JsonNull.INSTANCE);
         args.add("input_message_content", photo);
         return send("sendMessage", args).thenApply(MessageDecoder::decode);
     }
@@ -121,8 +130,8 @@ public final class TdTelegramClient implements TelegramClient, TelegramAuth {
     @Override public void addListener(EventListener listener) { if (listener != null) listeners.addIfAbsent(listener); }
     @Override public void removeListener(EventListener listener) { listeners.remove(listener); }
 
-    @Override public CompletableFuture<Void> state() {
-        return CompletableFuture.completedFuture(null);
+    @Override public CompletableFuture<AuthState> state() {
+        return CompletableFuture.completedFuture(authState);
     }
 
     @Override public CompletableFuture<Void> submitPhoneNumber(String phoneNumber) {
@@ -153,20 +162,19 @@ public final class TdTelegramClient implements TelegramClient, TelegramAuth {
     public void startAuthorization() {
         JsonObject params = new JsonObject();
         params.addProperty("@type", "setTdlibParameters");
-        params.addProperty("database_directory", "telegram-data");
-        params.addProperty("files_directory", "telegram-data/files");
+        params.addProperty("database_directory", config.databaseDirectory);
+        params.addProperty("files_directory", config.filesDirectory);
         params.addProperty("use_message_database", true);
         params.addProperty("use_secret_chats", true);
         params.addProperty("api_id", config.apiId);
         params.addProperty("api_hash", config.apiHash);
         params.addProperty("system_language_code", Locale.getDefault().getLanguage());
-        params.addProperty("device_model", "Samurai Telegram Core");
+        params.addProperty("device_model", config.deviceModel);
         params.addProperty("system_version", System.getProperty("os.name", "unknown"));
-        params.addProperty("application_version", "0.1.0");
+        params.addProperty("application_version", config.applicationVersion);
         params.addProperty("enable_storage_optimizer", true);
         params.addProperty("use_test_dc", false);
         bridge.send(clientId, GSON.toJson(params));
-        authState = new AuthState(AuthState.Type.UNKNOWN);
     }
 
     public void close() {
@@ -241,7 +249,6 @@ public final class TdTelegramClient implements TelegramClient, TelegramAuth {
         }
         authState = new AuthState(mapped);
         for (EventListener listener : listeners) listener.onAuthStateChanged(authState);
-        try { sessionStore.save(new byte[]{1}); } catch (RuntimeException ignored) { }
     }
 
     private static <T> CompletableFuture<T> failed(Throwable error) {
