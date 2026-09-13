@@ -9,7 +9,3 @@ repositories {
 
 // Deliberately transport-free. TDLib native/JNI integration lives behind
 // the public API so host applications never depend on Telegram internals.
-
-test {
-    useJUnitPlatform()
-}
