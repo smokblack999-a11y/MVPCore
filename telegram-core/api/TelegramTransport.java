@@ -2,12 +2,16 @@ package telegram.core.api;
 
 import java.util.concurrent.CompletableFuture;
 
-/** Internal transport seam. The production Android implementation adapts TDLib here. */
+/** Internal transport seam. The production implementation adapts the official TDLib client. */
 public interface TelegramTransport {
     CompletableFuture<AuthorizationState> authorizationState();
     CompletableFuture<Void> setPhoneNumber(String phoneNumber);
+    CompletableFuture<Void> setEmailAddress(String emailAddress);
+    CompletableFuture<Void> setEmailCode(String code);
     CompletableFuture<Void> setCode(String code);
+    CompletableFuture<Void> resendCode();
     CompletableFuture<Void> setPassword(String password);
+    CompletableFuture<Void> register(String firstName, String lastName);
     CompletableFuture<Void> close();
     CompletableFuture<Page<Chat>> chats(int limit, long cursor);
     CompletableFuture<Page<Message>> messages(long chatId, int limit, long fromMessageId);
