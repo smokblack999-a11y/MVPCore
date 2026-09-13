@@ -1,6 +1,7 @@
 package telegram.core.api;
 
-public final class TelegramError {
+/** Stable error taxonomy. Raw transport errors stay behind the public boundary. */
+public final class TelegramError extends Exception {
     public enum Code {
         NETWORK,
         AUTH_REQUIRED,
@@ -8,14 +9,15 @@ public final class TelegramError {
         RATE_LIMITED,
         PERMISSION_DENIED,
         MEDIA_FAILED,
-        UNKNOWN
+        INVALID_ARGUMENT,
+        INTERNAL
     }
 
     public final Code code;
-    public final String message;
 
     public TelegramError(Code code, String message) {
+        super(message == null ? code.name() : message);
+        if (code == null) throw new IllegalArgumentException("code required");
         this.code = code;
-        this.message = message;
     }
 }
