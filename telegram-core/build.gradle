@@ -1,11 +1,16 @@
-apply plugin: 'java'
-
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
-
-repositories {
-    mavenCentral()
+plugins {
+    id 'base'
 }
 
-// Deliberately transport-free. TDLib native/JNI integration lives behind
-// the public API so host applications never depend on Telegram internals.
+allprojects {
+    group = 'com.samurai.telegram'
+    version = '0.1.0'
+}
+
+tasks.register('verifyModules') {
+    dependsOn ':telegram-core-api:build', ':telegram-core-tdlib:build'
+}
+
+tasks.named('build') {
+    dependsOn 'verifyModules'
+}
