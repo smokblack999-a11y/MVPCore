@@ -19,6 +19,7 @@ public interface TelegramClient {
     interface EventListener {
         void onAuthStateChanged(AuthorizationState state);
         void onMessage(Message message);
+        void onTransferProgress(TransferProgress progress);
         void onError(TelegramError error);
     }
 }
