@@ -9,8 +9,8 @@ import telegram.core.api.SendOptions;
 import telegram.core.api.TelegramClient;
 import telegram.core.api.TelegramError;
 import telegram.core.api.TelegramTransport;
+import telegram.core.api.TransferProgress;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -30,6 +30,9 @@ public final class DefaultTelegramClient implements TelegramClient {
             }
             @Override public void onMessage(Message message) {
                 for (EventListener listener : listeners) listener.onMessage(message);
+            }
+            @Override public void onTransferProgress(TransferProgress progress) {
+                for (EventListener listener : listeners) listener.onTransferProgress(progress);
             }
             @Override public void onError(TelegramError error) {
                 for (EventListener listener : listeners) listener.onError(error);
