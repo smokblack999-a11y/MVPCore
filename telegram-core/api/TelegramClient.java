@@ -6,8 +6,12 @@ import java.util.concurrent.CompletableFuture;
 public interface TelegramClient {
     CompletableFuture<AuthorizationState> getAuthState();
     CompletableFuture<Void> submitPhoneNumber(String phoneNumber);
+    CompletableFuture<Void> submitEmailAddress(String emailAddress);
+    CompletableFuture<Void> submitEmailCode(String code);
     CompletableFuture<Void> submitCode(String code);
+    CompletableFuture<Void> resendCode();
     CompletableFuture<Void> submitPassword(String password);
+    CompletableFuture<Void> register(String firstName, String lastName);
     CompletableFuture<Void> logout();
     CompletableFuture<Page<Chat>> getChats(int limit, long cursor);
     CompletableFuture<Page<Message>> getMessages(long chatId, int limit, long fromMessageId);
