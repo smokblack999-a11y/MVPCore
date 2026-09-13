@@ -1,6 +1,8 @@
 package telegram.core.tdlib;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import telegram.core.api.TelegramAuth;
@@ -10,32 +12,40 @@ import telegram.core.api.TelegramError;
 import telegram.core.api.TelegramFactory;
 
 import java.io.File;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-/** Production-oriented TDLib JSON client. Telegram is a real user account, not a bot. */
+/** Real Telegram user-account client over the official TDLib JSON Java binding. */
 public final class TdTelegramClient implements TelegramClient, TelegramAuth {
     private static final Gson GSON = new Gson();
+    private static final int KEY_BYTES = 32;
 
     private final TelegramConfig config;
-    private final TelegramFactory.SessionStore sessionStore;
+    private final TelegramFactory.SessionStore secretStore;
     private final TdJsonBridge bridge;
     private final int clientId;
     private final CopyOnWriteArrayList<EventListener> listeners = new CopyOnWriteArrayList<>();
     private final ConcurrentHashMap<Long, CompletableFuture<JsonObject>> pending = new ConcurrentHashMap<>();
     private final AtomicLong requestSeq = new AtomicLong(1);
     private final AtomicBoolean running = new AtomicBoolean(true);
+    private final byte[] databaseKey;
     private final Thread receiver;
     private volatile AuthState authState = new AuthState(AuthState.Type.UNKNOWN);
 
-    public TdTelegramClient(TelegramConfig config, TelegramFactory.SessionStore sessionStore) {
+    public TdTelegramClient(TelegramConfig config, TelegramFactory.SessionStore secretStore) {
         this.config = config;
-        this.sessionStore = sessionStore;
+        if (secretStore == null) throw new IllegalArgumentException("sessionStore required");
+        this.secretStore = secretStore;
+        this.databaseKey = loadOrCreateDatabaseKey(secretStore);
         this.bridge = TdJsonBridge.load();
         this.clientId = bridge.createClientId();
         this.receiver = new Thread(this::receiveLoop, "telegram-tdlib-receiver");
@@ -49,7 +59,6 @@ public final class TdTelegramClient implements TelegramClient, TelegramAuth {
     }
 
     @Override public CompletableFuture<AuthState> login() {
-        startAuthorization();
         return CompletableFuture.completedFuture(authState);
     }
 
@@ -66,7 +75,27 @@ public final class TdTelegramClient implements TelegramClient, TelegramAuth {
         list.addProperty("@type", "chatListMain");
         args.add("chat_list", list);
         args.addProperty("limit", Math.max(1, Math.min(limit, 100)));
-        return send("getChats", args).thenApply(response -> new ChatListDecoder().decode(response));
+        return send("getChats", args).thenCompose(response -> {
+            List<Long> ids = new ChatListDecoder().ids(response);
+            if (ids.isEmpty()) return CompletableFuture.completedFuture(Collections.emptyList());
+            List<CompletableFuture<Chat>> futures = new ArrayList<>(ids.size());
+            for (Long id : ids) futures.add(getChat(id));
+            CompletableFuture<Void> all = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+            return all.thenApply(v -> {
+                List<Chat> chats = new ArrayList<>(futures.size());
+                for (CompletableFuture<Chat> future : futures) chats.add(future.join());
+                return chats;
+            });
+        });
+    }
+
+    private CompletableFuture<Chat> getChat(long chatId) {
+        JsonObject args = new JsonObject();
+        args.addProperty("chat_id", chatId);
+        return send("getChat", args).thenApply(chat -> {
+            String title = chat.has("title") ? chat.get("title").getAsString() : Long.toString(chatId);
+            return new Chat(chatId, title);
+        });
     }
 
     @Override public CompletableFuture<List<Message>> getMessages(long chatId, int limit) {
@@ -83,15 +112,11 @@ public final class TdTelegramClient implements TelegramClient, TelegramAuth {
         JsonObject formatted = new JsonObject();
         formatted.addProperty("@type", "formattedText");
         formatted.addProperty("text", text == null ? "" : text);
-        formatted.add("entities", new com.google.gson.JsonArray());
+        formatted.add("entities", new JsonArray());
         JsonObject content = new JsonObject();
         content.addProperty("@type", "inputMessageText");
         content.add("text", formatted);
-        JsonObject args = new JsonObject();
-        args.addProperty("chat_id", chatId);
-        args.add("reply_to", com.google.gson.JsonNull.INSTANCE);
-        args.add("options", new JsonObject());
-        args.add("reply_markup", com.google.gson.JsonNull.INSTANCE);
+        JsonObject args = sendMessageBase(chatId);
         args.add("input_message_content", content);
         return send("sendMessage", args).thenApply(MessageDecoder::decode);
     }
@@ -109,22 +134,26 @@ public final class TdTelegramClient implements TelegramClient, TelegramAuth {
         JsonObject photo = new JsonObject();
         photo.addProperty("@type", "inputMessagePhoto");
         photo.add("photo", local);
-        photo.add("added_sticker_file_ids", new com.google.gson.JsonArray());
-        photo.addProperty("width", 0);
-        photo.addProperty("height", 0);
+        photo.add("added_sticker_file_ids", new JsonArray());
         JsonObject captionJson = new JsonObject();
         captionJson.addProperty("@type", "formattedText");
         captionJson.addProperty("text", caption == null ? "" : caption);
-        captionJson.add("entities", new com.google.gson.JsonArray());
+        captionJson.add("entities", new JsonArray());
         photo.add("caption", captionJson);
 
-        JsonObject args = new JsonObject();
-        args.addProperty("chat_id", chatId);
-        args.add("reply_to", com.google.gson.JsonNull.INSTANCE);
-        args.add("options", new JsonObject());
-        args.add("reply_markup", com.google.gson.JsonNull.INSTANCE);
+        JsonObject args = sendMessageBase(chatId);
         args.add("input_message_content", photo);
         return send("sendMessage", args).thenApply(MessageDecoder::decode);
+    }
+
+    private static JsonObject sendMessageBase(long chatId) {
+        JsonObject args = new JsonObject();
+        args.addProperty("chat_id", chatId);
+        args.add("topic_id", JsonNull.INSTANCE);
+        args.add("reply_to", JsonNull.INSTANCE);
+        args.add("options", JsonNull.INSTANCE);
+        args.add("reply_markup", JsonNull.INSTANCE);
+        return args;
     }
 
     @Override public void addListener(EventListener listener) { if (listener != null) listeners.addIfAbsent(listener); }
@@ -135,6 +164,7 @@ public final class TdTelegramClient implements TelegramClient, TelegramAuth {
     }
 
     @Override public CompletableFuture<Void> submitPhoneNumber(String phoneNumber) {
+        requireNonEmpty(phoneNumber, "phoneNumber");
         JsonObject args = new JsonObject();
         args.addProperty("phone_number", phoneNumber);
         JsonObject settings = new JsonObject();
@@ -148,37 +178,45 @@ public final class TdTelegramClient implements TelegramClient, TelegramAuth {
     }
 
     @Override public CompletableFuture<Void> submitCode(String code) {
+        requireNonEmpty(code, "code");
         JsonObject args = new JsonObject();
         args.addProperty("code", code);
         return send("checkAuthenticationCode", args).thenApply(x -> null);
     }
 
     @Override public CompletableFuture<Void> submitPassword(String password) {
+        requireNonEmpty(password, "password");
         JsonObject args = new JsonObject();
         args.addProperty("password", password);
         return send("checkAuthenticationPassword", args).thenApply(x -> null);
     }
 
-    public void startAuthorization() {
+    private void startAuthorization() {
         JsonObject params = new JsonObject();
         params.addProperty("@type", "setTdlibParameters");
+        params.addProperty("use_test_dc", false);
         params.addProperty("database_directory", config.databaseDirectory);
         params.addProperty("files_directory", config.filesDirectory);
+        params.addProperty("database_encryption_key", Base64.getEncoder().encodeToString(databaseKey));
+        params.addProperty("use_file_database", true);
+        params.addProperty("use_chat_info_database", true);
         params.addProperty("use_message_database", true);
         params.addProperty("use_secret_chats", true);
         params.addProperty("api_id", config.apiId);
         params.addProperty("api_hash", config.apiHash);
-        params.addProperty("system_language_code", Locale.getDefault().getLanguage());
+        params.addProperty("system_language_code", Locale.getDefault().toLanguageTag());
         params.addProperty("device_model", config.deviceModel);
-        params.addProperty("system_version", System.getProperty("os.name", "unknown"));
+        params.addProperty("system_version", System.getProperty("os.version", "unknown"));
         params.addProperty("application_version", config.applicationVersion);
         params.addProperty("enable_storage_optimizer", true);
-        params.addProperty("use_test_dc", false);
         bridge.send(clientId, GSON.toJson(params));
     }
 
     public void close() {
-        if (running.compareAndSet(true, false)) receiver.interrupt();
+        if (running.compareAndSet(true, false)) {
+            receiver.interrupt();
+            try { bridge.send(clientId, "{\"@type\":\"close\"}"); } catch (RuntimeException ignored) { }
+        }
     }
 
     private CompletableFuture<JsonObject> send(String type, JsonObject args) {
@@ -209,6 +247,9 @@ public final class TdTelegramClient implements TelegramClient, TelegramAuth {
                 for (EventListener listener : listeners) listener.onError(error);
             }
         }
+        IllegalStateException closed = new IllegalStateException("Telegram client stopped");
+        for (CompletableFuture<JsonObject> future : pending.values()) future.completeExceptionally(closed);
+        pending.clear();
     }
 
     private void handle(JsonObject update) {
@@ -235,11 +276,17 @@ public final class TdTelegramClient implements TelegramClient, TelegramAuth {
     }
 
     private void handleAuth(JsonObject state) {
-        if (state == null) return;
+        if (state == null || !state.has("@type")) return;
         String type = state.get("@type").getAsString();
+        if ("authorizationStateWaitEncryptionKey".equals(type)) {
+            JsonObject args = new JsonObject();
+            args.addProperty("encryption_key", Base64.getEncoder().encodeToString(databaseKey));
+            send("checkDatabaseEncryptionKey", args);
+        }
         AuthState.Type mapped;
         switch (type) {
             case "authorizationStateWaitPhoneNumber": mapped = AuthState.Type.WAIT_PHONE; break;
+            case "authorizationStateWaitEmailAddress": mapped = AuthState.Type.WAIT_PHONE; break;
             case "authorizationStateWaitCode": mapped = AuthState.Type.WAIT_CODE; break;
             case "authorizationStateWaitPassword": mapped = AuthState.Type.WAIT_PASSWORD; break;
             case "authorizationStateReady": mapped = AuthState.Type.READY; break;
@@ -249,6 +296,19 @@ public final class TdTelegramClient implements TelegramClient, TelegramAuth {
         }
         authState = new AuthState(mapped);
         for (EventListener listener : listeners) listener.onAuthStateChanged(authState);
+    }
+
+    private static byte[] loadOrCreateDatabaseKey(TelegramFactory.SessionStore store) {
+        byte[] existing = store.load();
+        if (existing != null && existing.length == KEY_BYTES) return existing.clone();
+        byte[] generated = new byte[KEY_BYTES];
+        new SecureRandom().nextBytes(generated);
+        store.save(generated.clone());
+        return generated;
+    }
+
+    private static void requireNonEmpty(String value, String name) {
+        if (value == null || value.trim().isEmpty()) throw new IllegalArgumentException(name + " required");
     }
 
     private static <T> CompletableFuture<T> failed(Throwable error) {
