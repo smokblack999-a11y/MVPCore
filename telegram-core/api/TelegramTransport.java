@@ -2,10 +2,7 @@ package telegram.core.api;
 
 import java.util.concurrent.CompletableFuture;
 
-/**
- * Internal transport seam. The production Android implementation will adapt TDLib here.
- * No TDLib type is allowed to cross this boundary.
- */
+/** Internal transport seam. The production Android implementation adapts TDLib here. */
 public interface TelegramTransport {
     CompletableFuture<AuthorizationState> authorizationState();
     CompletableFuture<Void> setPhoneNumber(String phoneNumber);
@@ -21,6 +18,7 @@ public interface TelegramTransport {
     interface Listener {
         void onAuthorizationState(AuthorizationState state);
         void onMessage(Message message);
+        void onTransferProgress(TransferProgress progress);
         void onError(TelegramError error);
     }
 }
