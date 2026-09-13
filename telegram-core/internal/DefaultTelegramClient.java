@@ -47,21 +47,34 @@ public final class DefaultTelegramClient implements TelegramClient {
         requireText(phoneNumber, "phoneNumber");
         return transport.setPhoneNumber(phoneNumber);
     }
+    @Override public CompletableFuture<Void> submitEmailAddress(String emailAddress) {
+        requireText(emailAddress, "emailAddress");
+        return transport.setEmailAddress(emailAddress);
+    }
+    @Override public CompletableFuture<Void> submitEmailCode(String code) {
+        requireText(code, "code");
+        return transport.setEmailCode(code);
+    }
     @Override public CompletableFuture<Void> submitCode(String code) {
         requireText(code, "code");
         return transport.setCode(code);
     }
+    @Override public CompletableFuture<Void> resendCode() { return transport.resendCode(); }
     @Override public CompletableFuture<Void> submitPassword(String password) {
         requireText(password, "password");
         return transport.setPassword(password);
     }
+    @Override public CompletableFuture<Void> register(String firstName, String lastName) {
+        requireText(firstName, "firstName");
+        return transport.register(firstName, lastName == null ? "" : lastName);
+    }
     @Override public CompletableFuture<Void> logout() { return transport.close(); }
     @Override public CompletableFuture<Page<Chat>> getChats(int limit, long cursor) {
-        return transport.chats(clamp(limit), cursor);
+        return transport.chats(clamp(limit), Math.max(0L, cursor));
     }
     @Override public CompletableFuture<Page<Message>> getMessages(long chatId, int limit, long fromMessageId) {
         if (chatId == 0) return failed(new IllegalArgumentException("chatId required"));
-        return transport.messages(chatId, clamp(limit), fromMessageId);
+        return transport.messages(chatId, clamp(limit), Math.max(0L, fromMessageId));
     }
     @Override public CompletableFuture<Message> sendText(long chatId, String text, SendOptions options) {
         if (chatId == 0) return failed(new IllegalArgumentException("chatId required"));
