@@ -1,11 +1,12 @@
 package telegram.core.api;
 
-public interface TelegramFactory {
-    TelegramClient create(TelegramConfig config, SessionStore sessionStore);
+import telegram.core.internal.DefaultTelegramClient;
 
-    interface SessionStore {
-        byte[] load();
-        void save(byte[] session);
-        void clear();
+/** Composition root. A TDLib adapter is injected; the host never depends on it directly. */
+public final class TelegramFactory {
+    private TelegramFactory() { }
+
+    public static TelegramClient create(TelegramTransport transport) {
+        return new DefaultTelegramClient(transport);
     }
 }
