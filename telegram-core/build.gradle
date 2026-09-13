@@ -1,0 +1,15 @@
+apply plugin: 'java'
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+repositories {
+    mavenCentral()
+}
+
+// Deliberately transport-free. TDLib native/JNI integration lives behind
+// the public API so host applications never depend on Telegram internals.
+
+test {
+    useJUnitPlatform()
+}
