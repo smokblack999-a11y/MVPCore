@@ -1,0 +1,71 @@
+name: Telegram Core TDLib
+
+on:
+  push:
+    branches: [telegram-core]
+    paths:
+      - 'telegram-core/**'
+      - '.github/workflows/telegram-core-tdlib.yml'
+  pull_request:
+    branches: [telegram-core]
+    paths:
+      - 'telegram-core/**'
+      - '.github/workflows/telegram-core-tdlib.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-tdlib-android:
+    name: Build pinned TDLib JSONJava
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install pinned Android toolchain
+        run: |
+          sdkmanager "platforms;android-34" "build-tools;35.0.0" "cmake;3.22.1" "ndk;23.2.8568313"
+
+      - name: Build pinned TDLib JSONJava
+        working-directory: telegram-core
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+        run: |
+          chmod +x scripts/build-tdlib-android.sh
+          ./scripts/build-tdlib-android.sh
+
+      - name: Verify real tdjsonjava artifacts
+        working-directory: telegram-core/telegram-core-tdlib-android
+        run: |
+          cat generated-tdlib-commit.txt
+          for abi in arm64-v8a armeabi-v7a x86_64 x86; do
+            test -s "generated-jni-libs/$abi/libtdjsonjava.so"
+            file "generated-jni-libs/$abi/libtdjsonjava.so"
+          done
+          test -s generated-src/main/java/org/drinkless/tdlib/JsonClient.java
+
+      - name: Build Telegram Core Android library
+        working-directory: telegram-core
+        run: |
+          chmod +x ./gradlew 2>/dev/null || true
+          ./gradlew :telegram-core-tdlib-android:assembleRelease --stacktrace
+
+      - name: Upload TDLib Android artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: telegram-core-tdlib-android
+          path: |
+            telegram-core/telegram-core-tdlib-android/build/outputs/aar/*.aar
+            telegram-core/telegram-core-tdlib-android/generated-tdlib-commit.txt
+            telegram-core/telegram-core-tdlib-android/generated-openssl-version.txt
