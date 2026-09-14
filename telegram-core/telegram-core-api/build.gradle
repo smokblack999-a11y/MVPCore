@@ -12,3 +12,11 @@ sourceSets {
         java.srcDirs = ['../api', 'src/main/java']
     }
 }
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+}
+
+test {
+    useJUnitPlatform()
+}
