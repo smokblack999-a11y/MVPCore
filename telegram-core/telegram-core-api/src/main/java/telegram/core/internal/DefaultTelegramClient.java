@@ -40,8 +40,9 @@ public final class DefaultTelegramClient implements TelegramClient {
         });
     }
 
-    @Override public CompletableFuture<AuthorizationState> getAuthState() { return transport.authorizationState(); }
+    @Override public CompletableFuture<AuthorizationState> getAuthState() { return CompletableFuture.completedFuture(state); }
     @Override public CompletableFuture<Void> submitPhoneNumber(String phoneNumber) { return transport.setPhoneNumber(requireText(phoneNumber, "phoneNumber")); }
+    @Override public CompletableFuture<Void> requestQrCodeAuthentication() { return transport.requestQrCodeAuthentication(); }
     @Override public CompletableFuture<Void> submitEmailAddress(String emailAddress) { return transport.setEmailAddress(requireText(emailAddress, "emailAddress")); }
     @Override public CompletableFuture<Void> submitEmailCode(String code) { return transport.setEmailCode(requireText(code, "code")); }
     @Override public CompletableFuture<Void> submitCode(String code) { return transport.setCode(requireText(code, "code")); }
@@ -50,7 +51,7 @@ public final class DefaultTelegramClient implements TelegramClient {
     @Override public CompletableFuture<Void> register(String firstName, String lastName) {
         return transport.register(requireText(firstName, "firstName"), lastName == null ? "" : lastName);
     }
-    @Override public CompletableFuture<Void> logout() { return transport.close(); }
+    @Override public CompletableFuture<Void> logout() { return transport.logout(); }
     @Override public CompletableFuture<Page<Chat>> getChats(int limit, long cursor) { return transport.chats(clamp(limit), Math.max(0L, cursor)); }
     @Override public CompletableFuture<Page<Message>> getMessages(long chatId, int limit, long fromMessageId) {
         if (chatId == 0) return failed(new IllegalArgumentException("chatId required"));
