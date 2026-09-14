@@ -57,11 +57,11 @@ Message history uses TDLib's reverse-chronological `getChatHistory` semantics. T
 
 ## Media correctness
 
-A local file is represented by `inputFileLocal`. Current TDLib message media uses wrapper types: `inputMessagePhoto.photo` is an `inputPhoto`, and `inputMessageVideo.video` is an `inputVideo`; documents use `inputDocument`. The adapter must construct the complete wrapper objects instead of passing a bare `inputFileLocal` where TDLib expects a typed wrapper.
+A local file is represented by `inputFileLocal`. `inputMessagePhoto.photo`, `inputMessageVideo.video`, and `inputMessageDocument.document` all accept the appropriate `InputFile` object in the current TDLib schema. The adapter must supply the complete media object fields required by the pinned schema and must not guess fields from an older TDLib version.
 
 ## Native build
 
-TDLib's official Android example builds native libraries and Java/JSON bindings from source. The project must pin an exact TDLib source commit and build reproducibly in CI. Supported Android ABIs are a release decision and must match the host application's actual device matrix; an ABI is not considered supported merely because Java compilation succeeds.
+TDLib's official Android example builds native libraries and Java/JSON bindings from source. The project pins an exact TDLib source commit and builds reproducibly in CI. The current lock is `telegram-core/native/TDLIB_LOCK`; the current build interface is `JSONJava`, producing `JsonClient.java` plus `libtdjsonjava.so`.
 
 ## Non-negotiable rules
 
