@@ -19,3 +19,4 @@ dependencyResolutionManagement {
 rootProject.name = 'TelegramCore'
 include ':telegram-core-api'
 include ':telegram-core-tdlib'
+include ':telegram-core-tdlib-android'
