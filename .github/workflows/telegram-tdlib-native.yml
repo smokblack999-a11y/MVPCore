@@ -101,7 +101,7 @@ jobs:
       - name: Download pinned TDLib artifact
         uses: actions/download-artifact@v4
         with:
-          name: tdlib-jsonjava-${{ needs.build-tdlib-jsonjava.outputs.artifact }}
+          name: ${{ needs.build-tdlib-jsonjava.outputs.artifact }}
           path: telegram-core/native/out
 
       - name: Import native TDLib into Android module
