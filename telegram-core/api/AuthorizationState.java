@@ -5,9 +5,11 @@ public final class AuthorizationState {
     public enum Type {
         UNKNOWN,
         WAIT_PHONE,
+        WAIT_PREMIUM_PURCHASE,
         WAIT_EMAIL,
         WAIT_EMAIL_CODE,
         WAIT_CODE,
+        WAIT_OTHER_DEVICE_CONFIRMATION,
         WAIT_PASSWORD,
         WAIT_REGISTRATION,
         READY,
