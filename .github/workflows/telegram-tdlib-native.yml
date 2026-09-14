@@ -1,0 +1,72 @@
+name: Telegram TDLib Native
+
+on:
+  push:
+    branches: [telegram-core]
+    paths:
+      - 'telegram-core/native/**'
+      - '.github/workflows/telegram-tdlib-native.yml'
+  pull_request:
+    paths:
+      - 'telegram-core/native/**'
+      - '.github/workflows/telegram-tdlib-native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-tdlib-jsonjava:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout MVPCore
+        uses: actions/checkout@v4
+
+      - name: Read TDLib lock
+        id: lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          source telegram-core/native/TDLIB_LOCK
+          echo "commit=$TDLIB_COMMIT" >> "$GITHUB_OUTPUT"
+          echo "ndk=$ANDROID_NDK_VERSION" >> "$GITHUB_OUTPUT"
+          echo "interface=$TDLIB_INTERFACE" >> "$GITHUB_OUTPUT"
+
+      - name: Build official TDLib JSONJava artifact
+        working-directory: telegram-core/native
+        run: bash build-tdlib-jsonjava.sh
+
+      - name: Verify generated artifact contract
+        working-directory: telegram-core/native/out
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$(find . -type f -name 'tdlib*.zip' -print -quit)"
+          ZIP="$(find . -type f -name 'tdlib.zip' -print -quit)"
+          test -n "$ZIP"
+          unzip -l "$ZIP" | grep -E 'tdlib/java/org/drinkless/tdlib/JsonClient.java$'
+          unzip -l "$ZIP" | grep -E 'tdlib/libs/(arm64-v8a|armeabi-v7a|x86_64|x86)/libtdjsonjava\.so$'
+          unzip -p "$ZIP" tdlib/java/org/drinkless/tdlib/JsonClient.java | grep -q 'class JsonClient'
+
+      - name: Write build provenance
+        working-directory: telegram-core/native/out
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "TDLib commit: ${{ steps.lock.outputs.commit }}"
+            echo "NDK: ${{ steps.lock.outputs.ndk }}"
+            echo "Interface: ${{ steps.lock.outputs.interface }}"
+            echo "Runner: ubuntu-24.04"
+          } > TDLib-BUILD-PROVENANCE.txt
+          sha256sum "$(find . -type f -name 'tdlib.zip' -print -quit)" > TDLib-ARTIFACT-SHA256.txt
+
+      - name: Upload TDLib JSONJava artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tdlib-jsonjava-${{ steps.lock.outputs.commit }}
+          path: |
+            telegram-core/native/out/**
+          if-no-files-found: error
+          retention-days: 30
