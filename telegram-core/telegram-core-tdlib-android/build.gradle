@@ -1,0 +1,51 @@
+plugins {
+    id 'com.android.library' version '8.7.3'
+}
+
+android {
+    namespace 'com.samurai.telegram.tdlib'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 23
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs += 'generated-src/main/java'
+            jniLibs.srcDirs += 'generated-jni-libs'
+        }
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+}
+
+dependencies {
+    api project(':telegram-core-api')
+    api project(':telegram-core-tdlib')
+}
+
+tasks.register('verifyTdlibNative') {
+    doLast {
+        def root = file('generated-jni-libs')
+        ['arm64-v8a', 'armeabi-v7a', 'x86_64', 'x86'].each { abi ->
+            def lib = file("$root/$abi/libtdjsonjava.so")
+            if (!lib.isFile() || lib.length() == 0) {
+                throw new GradleException("Missing real TDLib JSONJava native library: ${lib}")
+            }
+        }
+        def javaFile = file('generated-src/main/java/org/drinkless/tdlib/JsonClient.java')
+        if (!javaFile.isFile()) {
+            throw new GradleException("Missing generated TDLib JsonClient.java: ${javaFile}")
+        }
+    }
+}
+
+tasks.named('preBuild') {
+    dependsOn 'verifyTdlibNative'
+}
