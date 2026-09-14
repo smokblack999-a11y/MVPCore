@@ -6,28 +6,41 @@ Standalone Telegram user-account client module for reuse by Android and other ap
 
 Provide a clean boundary between the host application and Telegram. The host must not depend on Telegram transport internals.
 
-## Planned capabilities
-
-- User-account authentication (not Bot API)
-- Persistent session lifecycle
-- Chats, groups and channels
-- Message history and synchronization
-- Text and media sending
-- Media upload/download
-- Retry and network recovery
-- Notifications/events
-- Multiple-account-ready architecture
-
 ## Architecture
 
-`Host App -> Telegram Core API -> Telegram client/TDLib -> Telegram account`
+`Host App -> Telegram Core API -> transport -> TDLib JSON/JNI -> Telegram account`
 
-Camera and gallery are intentionally outside this module. They can be connected later through the public API.
+Camera, gallery, GPS and EXIF are intentionally outside this module. They enter through `MediaSpec` and the public API later.
+
+## What is already locked
+
+- User-account architecture, not Bot API.
+- Transport-neutral public API.
+- Explicit authorization state model.
+- Phone, email, code, password and registration contracts.
+- QR authentication contract.
+- Chat/message/media abstractions.
+- Session/database encryption boundary.
+- Deterministic API contract tests.
+- TDLib-specific code isolated in the transport module.
+
+## Production gates still required
+
+- Pin and build an exact TDLib revision for Android.
+- Ship native libraries for the deliberately supported ABIs.
+- Validate every current authorization state against the real TDLib runtime.
+- Replace any legacy transport behavior that does not match the pinned TDLib schema.
+- Validate chat cache/update ordering, message pagination, media upload and send-result reconciliation.
+- Run real-account integration tests and clean CI from a fresh checkout.
 
 ## Security
 
-Authentication secrets and session data must never be committed to Git. Runtime credentials belong in protected local/device storage.
+Authentication secrets, API credentials and runtime session/database data must never be committed to Git. Sensitive values must never appear in logs.
 
 ## Status
 
-Scaffold only. Telegram transport integration is the next implementation step.
+**Architecture: locked.**
+
+**Implementation: real TDLib adapter present, production integration gate not yet passed.**
+
+The project deliberately does not call the module production-ready until native TDLib and real-account integration tests pass.
