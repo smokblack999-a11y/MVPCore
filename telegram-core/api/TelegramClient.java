@@ -6,6 +6,7 @@ import java.util.concurrent.CompletableFuture;
 public interface TelegramClient {
     CompletableFuture<AuthorizationState> getAuthState();
     CompletableFuture<Void> submitPhoneNumber(String phoneNumber);
+    CompletableFuture<Void> requestQrCodeAuthentication();
     CompletableFuture<Void> submitEmailAddress(String emailAddress);
     CompletableFuture<Void> submitEmailCode(String code);
     CompletableFuture<Void> submitCode(String code);
