@@ -5,10 +5,16 @@ on:
     branches: [telegram-core]
     paths:
       - 'telegram-core/native/**'
+      - 'telegram-core/telegram-core-tdlib-android/**'
+      - 'telegram-core/settings.gradle'
+      - 'telegram-core/build.gradle'
       - '.github/workflows/telegram-tdlib-native.yml'
   pull_request:
     paths:
       - 'telegram-core/native/**'
+      - 'telegram-core/telegram-core-tdlib-android/**'
+      - 'telegram-core/settings.gradle'
+      - 'telegram-core/build.gradle'
       - '.github/workflows/telegram-tdlib-native.yml'
   workflow_dispatch:
 
@@ -19,6 +25,8 @@ jobs:
   build-tdlib-jsonjava:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    outputs:
+      artifact: tdlib-jsonjava-${{ steps.lock.outputs.commit }}
     steps:
       - name: Checkout MVPCore
         uses: actions/checkout@v4
@@ -42,11 +50,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$(find . -type f -name 'tdlib*.zip' -print -quit)"
           ZIP="$(find . -type f -name 'tdlib.zip' -print -quit)"
           test -n "$ZIP"
           unzip -l "$ZIP" | grep -E 'tdlib/java/org/drinkless/tdlib/JsonClient.java$'
-          unzip -l "$ZIP" | grep -E 'tdlib/libs/(arm64-v8a|armeabi-v7a|x86_64|x86)/libtdjsonjava\.so$'
+          for abi in arm64-v8a armeabi-v7a x86_64 x86; do
+            unzip -l "$ZIP" | grep -E "tdlib/libs/$abi/libtdjsonjava\\.so$"
+          done
           unzip -p "$ZIP" tdlib/java/org/drinkless/tdlib/JsonClient.java | grep -q 'class JsonClient'
 
       - name: Write build provenance
@@ -66,7 +75,45 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tdlib-jsonjava-${{ steps.lock.outputs.commit }}
-          path: |
-            telegram-core/native/out/**
+          path: telegram-core/native/out/**
           if-no-files-found: error
           retention-days: 30
+
+  android-runtime-smoke:
+    needs: build-tdlib-jsonjava
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout MVPCore
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Download pinned TDLib artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tdlib-jsonjava-${{ needs.build-tdlib-jsonjava.outputs.artifact }}
+          path: telegram-core/native/out
+
+      - name: Import native TDLib into Android module
+        run: |
+          bash telegram-core/native/import-tdlib-android.sh telegram-core/native/out/tdlib.zip
+
+      - name: Build Android runtime AAR
+        run: gradle -p telegram-core :telegram-core-tdlib-android:assembleRelease --stacktrace
+
+      - name: Verify AAR contains real JSONJava JNI
+        run: |
+          set -euo pipefail
+          AAR="telegram-core/telegram-core-tdlib-android/build/outputs/aar/telegram-core-tdlib-android-release.aar"
+          test -s "$AAR"
+          unzip -l "$AAR" | grep -E 'jni/(arm64-v8a|armeabi-v7a|x86_64|x86)/libtdjsonjava\\.so'
