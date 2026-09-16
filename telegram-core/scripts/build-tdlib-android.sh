@@ -17,11 +17,37 @@ TDLIB_INTERFACE="$(get_pin TDLIB_INTERFACE)"
 ANDROID_STL="$(get_pin ANDROID_STL)"
 
 : "${ANDROID_SDK_ROOT:?ANDROID_SDK_ROOT must point to the Android SDK}"
+: "${TDLIB_COMMIT:?TDLIB_COMMIT is required}"
+: "${NDK_VERSION:?ANDROID_NDK_VERSION is required}"
+: "${ANDROID_PLATFORM:?ANDROID_PLATFORM is required}"
+: "${CMAKE_VERSION:?CMAKE_VERSION is required}"
+: "${OPENSSL_VERSION:?OPENSSL_VERSION is required}"
+: "${TDLIB_INTERFACE:?TDLIB_INTERFACE is required}"
+: "${ANDROID_STL:?ANDROID_STL is required}"
+
+CMAKE_BIN="$ANDROID_SDK_ROOT/cmake/$CMAKE_VERSION/bin"
+NDK_HOME="$ANDROID_SDK_ROOT/ndk/$NDK_VERSION"
+
+for required in "$CMAKE_BIN/cmake" "$NDK_HOME/ndk-build"; do
+  test -x "$required" || { echo "Missing pinned Android tool: $required" >&2; exit 1; }
+done
+command -v git >/dev/null 2>&1 || { echo "git is required" >&2; exit 1; }
+command -v gperf >/dev/null 2>&1 || { echo "gperf is required" >&2; exit 1; }
+
+export PATH="$CMAKE_BIN:$PATH"
+export ANDROID_NDK_HOME="$NDK_HOME"
+export ANDROID_NDK_ROOT="$NDK_HOME"
 
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR"
 git clone --filter=blob:none https://github.com/tdlib/td.git "$WORK_DIR/td"
 git -C "$WORK_DIR/td" checkout --detach "$TDLIB_COMMIT"
+
+ACTUAL_COMMIT="$(git -C "$WORK_DIR/td" rev-parse HEAD)"
+test "$ACTUAL_COMMIT" = "$TDLIB_COMMIT" || {
+  echo "TDLib checkout mismatch: expected $TDLIB_COMMIT, got $ACTUAL_COMMIT" >&2
+  exit 1
+}
 
 cd "$WORK_DIR/td/example/android"
 
@@ -42,3 +68,6 @@ test -s "$OUT_DIR/generated-src/main/java/org/drinkless/tdlib/JsonClient.java"
 
 printf '%s\n' "$TDLIB_COMMIT" > "$OUT_DIR/generated-tdlib-commit.txt"
 printf '%s\n' "$OPENSSL_VERSION" > "$OUT_DIR/generated-openssl-version.txt"
+printf '%s\n' "$CMAKE_VERSION" > "$OUT_DIR/generated-cmake-version.txt"
+printf '%s\n' "$NDK_VERSION" > "$OUT_DIR/generated-ndk-version.txt"
+printf '%s\n' "$ANDROID_PLATFORM" > "$OUT_DIR/generated-android-platform.txt"
