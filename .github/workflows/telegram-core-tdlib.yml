@@ -22,10 +22,10 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -37,9 +37,15 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 12266719
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: true
+          packages: platform-tools
 
       - name: Install pinned Android toolchain and native build tools
         run: |
+          yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-34" "build-tools;35.0.0" "cmake;3.22.1" "ndk;23.2.8568313"
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gperf
@@ -77,3 +83,6 @@ jobs:
             telegram-core/telegram-core-tdlib-android/build/outputs/aar/*.aar
             telegram-core/telegram-core-tdlib-android/generated-tdlib-commit.txt
             telegram-core/telegram-core-tdlib-android/generated-openssl-version.txt
+            telegram-core/telegram-core-tdlib-android/generated-cmake-version.txt
+            telegram-core/telegram-core-tdlib-android/generated-ndk-version.txt
+            telegram-core/telegram-core-tdlib-android/generated-android-platform.txt
