@@ -18,8 +18,9 @@ permissions:
 
 jobs:
   build-tdlib-android:
-    name: Build pinned TDLib JSONJava
+    name: Build and runtime-test pinned TDLib JSONJava
     runs-on: ubuntu-24.04
+    timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -45,6 +46,7 @@ jobs:
 
       - name: Install pinned Android toolchain and native build tools
         run: |
+          set -euo pipefail
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-34" "build-tools;35.0.0" "cmake;3.22.1" "ndk;23.2.8568313"
           sudo apt-get update
@@ -56,13 +58,14 @@ jobs:
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
         run: |
+          set -euo pipefail
           chmod +x scripts/build-tdlib-android.sh
           ./scripts/build-tdlib-android.sh
 
       - name: Verify real tdjsonjava artifacts
         working-directory: telegram-core/telegram-core-tdlib-android
         run: |
-          cat generated-tdlib-commit.txt
+          set -euo pipefail
           test "$(cat generated-tdlib-commit.txt)" = "022d60202e446ad1287b9fb68e687c8a0760788b"
           for abi in arm64-v8a armeabi-v7a x86_64 x86; do
             test -s "generated-jni-libs/$abi/libtdjsonjava.so"
@@ -72,8 +75,18 @@ jobs:
 
       - name: Build Telegram Core Android library
         working-directory: telegram-core
-        run: |
-          gradle :telegram-core-tdlib-android:assembleRelease --stacktrace
+        run: gradle :telegram-core-tdlib-android:assembleDebug --stacktrace
+
+      - name: Run real JNI smoke test on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: gradle -p telegram-core :telegram-core-tdlib-android:connectedDebugAndroidTest --stacktrace
 
       - name: Upload TDLib Android artifact
         uses: actions/upload-artifact@v4
@@ -86,3 +99,4 @@ jobs:
             telegram-core/telegram-core-tdlib-android/generated-cmake-version.txt
             telegram-core/telegram-core-tdlib-android/generated-ndk-version.txt
             telegram-core/telegram-core-tdlib-android/generated-android-platform.txt
+          if-no-files-found: error
