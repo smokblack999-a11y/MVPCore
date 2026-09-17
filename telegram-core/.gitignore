@@ -12,3 +12,9 @@ sessions/
 .gradle/
 build/
 out/
+
+# Generated pinned TDLib native/Java outputs
+generated-jni-libs/
+generated-src/
+generated-*-version.txt
+generated-tdlib-commit.txt
