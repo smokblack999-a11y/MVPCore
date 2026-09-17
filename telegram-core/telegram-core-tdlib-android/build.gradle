@@ -28,6 +28,7 @@ android {
 dependencies {
     api project(':telegram-core-api')
     api project(':telegram-core-tdlib')
+    androidTestImplementation 'junit:junit:4.13.2'
 }
 
 tasks.register('verifyTdlibNative') {
