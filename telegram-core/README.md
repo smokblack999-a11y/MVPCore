@@ -47,7 +47,7 @@ The project deliberately does not call the module production-ready until native 
 
 ## Current hardening status
 
-- TDLib revision is pinned in `TDLIB_VERSION` and the Android build regenerates JSONJava from that exact revision.
+- TDLib v1.8.67 is pinned in `TDLIB_VERSION`, and the Android build regenerates JSONJava from that exact immutable commit.
 - The generated official `org.drinkless.tdlib.JsonClient` is the only Android JSON binding; no handwritten duplicate is packaged.
 - Android CI verifies non-empty `libtdjsonjava.so` for arm64-v8a, armeabi-v7a, x86_64 and x86 and runs a real JNI smoke test on an emulator.
 - Authorization covers phone, code, email, password, registration, QR, premium-purchase, other-device-confirmation, READY, logout and close states.
