@@ -297,7 +297,7 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
             return failed(new IllegalArgumentException("media file not readable"));
         }
 
-        String mime = spec.mimeType == null ? "" : spec.mimeType.toLowerCase(Locale.ROOT);
+        String mime = mediaMime(spec, file).toLowerCase(Locale.ROOT);
         JsonObject args = sendBase(chatId, options);
         JsonObject content;
 
@@ -391,6 +391,25 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
         input.addProperty("path", file.getAbsolutePath());
         return input;
     }
+
+    private static String mediaMime(MediaSpec spec, File file) {
+        if (spec.mimeType != null && !spec.mimeType.trim().isEmpty()) {
+            return spec.mimeType.trim();
+        }
+        String name = file.getName().toLowerCase(Locale.ROOT);
+        int dot = name.lastIndexOf('.');
+        String ext = dot >= 0 ? name.substring(dot + 1) : "";
+        if ("jpg".equals(ext) || "jpeg".equals(ext) || "png".equals(ext)
+                || "webp".equals(ext) || "heic".equals(ext) || "heif".equals(ext)) {
+            return "image/" + ("jpg".equals(ext) || "jpeg".equals(ext) ? "jpeg" : ext);
+        }
+        if ("mp4".equals(ext) || "m4v".equals(ext) || "mov".equals(ext)
+                || "webm".equals(ext) || "mkv".equals(ext) || "3gp".equals(ext)) {
+            return "video/" + ("3gp".equals(ext) ? "3gpp" : ext);
+        }
+        return "application/octet-stream";
+    }
+
 
     private CompletableFuture<JsonObject> request(String type, JsonObject args) {
         if (!running.get() || closing.get()) {
