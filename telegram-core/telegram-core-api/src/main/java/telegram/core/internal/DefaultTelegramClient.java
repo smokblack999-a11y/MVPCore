@@ -67,7 +67,14 @@ public final class DefaultTelegramClient implements TelegramClient {
         if (media == null) return failed(new IllegalArgumentException("media required"));
         return transport.sendMedia(chatId, media, options == null ? new SendOptions("", false) : options);
     }
-    @Override public void addListener(EventListener listener) { if (listener != null) listeners.addIfAbsent(listener); }
+    @Override public void addListener(EventListener listener) {
+        if (listener == null) return;
+        listeners.addIfAbsent(listener);
+        AuthorizationState currentState = state;
+        if (currentState != null && currentState.type != AuthorizationState.Type.UNKNOWN) {
+            listener.onAuthStateChanged(currentState);
+        }
+    }
     @Override public void removeListener(EventListener listener) { if (listener != null) listeners.remove(listener); }
 
     private static int clamp(int limit) { return Math.max(1, Math.min(100, limit)); }
