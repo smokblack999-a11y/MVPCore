@@ -40,7 +40,7 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
     private final AtomicBoolean running = new AtomicBoolean(true);
     private final ConcurrentHashMap<Long, CompletableFuture<JsonObject>> pending = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, String> transferNames = new ConcurrentHashMap<>();
-    private final CopyOnWriteArrayList<TransferRequest> transfers = new CopyOnWriteArrayList<>();
+    private final ConcurrentHashMap<String, String> transferPaths = new ConcurrentHashMap<>();
     private final Thread receiver;
     private volatile TelegramTransport.Listener listener;
     private volatile AuthorizationState state = new AuthorizationState(AuthorizationState.Type.UNKNOWN);
@@ -61,6 +61,10 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
 
     @Override public CompletableFuture<AuthorizationState> authorizationState() {
         return CompletableFuture.completedFuture(state);
+    }
+
+    @Override public CompletableFuture<Void> requestQrCodeAuthentication() {
+        return request("requestQrCodeAuthentication", new JsonObject()).thenApply(v -> null);
     }
 
     @Override public CompletableFuture<Void> setPhoneNumber(String phoneNumber) {
@@ -115,6 +119,10 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
         args.addProperty("last_name", lastName == null ? "" : lastName);
         args.addProperty("disable_notification", false);
         return request("registerUser", args).thenApply(v -> null);
+    }
+
+    @Override public CompletableFuture<Void> logout() {
+        return request("logOut", new JsonObject()).thenApply(v -> null);
     }
 
     @Override public CompletableFuture<Void> close() {
@@ -240,7 +248,7 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
         }
         JsonObject args = sendBase(chatId, options);
         args.add("input_message_content", content);
-        transfers.add(new TransferRequest(file.getAbsolutePath(), spec.fileName));
+        transferPaths.put(file.getAbsolutePath(), spec.fileName == null || spec.fileName.trim().isEmpty() ? file.getName() : spec.fileName);
         return request("sendMessage", args).thenApply(MessageJson::decode);
     }
 
@@ -351,11 +359,14 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
         AuthorizationState.Type mapped;
         switch (authType) {
             case "authorizationStateWaitPhoneNumber": mapped = AuthorizationState.Type.WAIT_PHONE; break;
+            case "authorizationStateWaitPremiumPurchase": mapped = AuthorizationState.Type.WAIT_PREMIUM_PURCHASE; break;
+            case "authorizationStateWaitOtherDeviceConfirmation": mapped = AuthorizationState.Type.WAIT_OTHER_DEVICE_CONFIRMATION; break;
             case "authorizationStateWaitEmailAddress": mapped = AuthorizationState.Type.WAIT_EMAIL; break;
             case "authorizationStateWaitEmailCode": mapped = AuthorizationState.Type.WAIT_EMAIL_CODE; break;
             case "authorizationStateWaitCode": mapped = AuthorizationState.Type.WAIT_CODE; break;
             case "authorizationStateWaitPassword": mapped = AuthorizationState.Type.WAIT_PASSWORD; break;
             case "authorizationStateWaitRegistration": mapped = AuthorizationState.Type.WAIT_REGISTRATION; break;
+            case "authorizationStateLoggingOut": mapped = AuthorizationState.Type.LOGGING_OUT; break;
             case "authorizationStateClosing": mapped = AuthorizationState.Type.CLOSING; break;
             case "authorizationStateClosed": mapped = AuthorizationState.Type.CLOSED; break;
             case "authorizationStateReady": mapped = AuthorizationState.Type.READY; break;
@@ -370,9 +381,17 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
         if (file == null) return;
         int fileId = file.has("id") ? file.get("id").getAsInt() : 0;
         JsonObject local = file.has("local") && file.get("local").isJsonObject() ? file.getAsJsonObject("local") : null;
-        long completed = local != null && local.has("downloaded_size") ? local.get("downloaded_size").getAsLong() : 0L;
+        long downloaded = local != null && local.has("downloaded_size") ? local.get("downloaded_size").getAsLong() : 0L;
+        long uploaded = local != null && local.has("uploaded_size") ? local.get("uploaded_size").getAsLong() : 0L;
+        long completed = Math.max(downloaded, uploaded);
         long total = file.has("size") ? file.get("size").getAsLong() : 0L;
-        boolean done = local != null && local.has("is_downloading_completed") && local.get("is_downloading_completed").getAsBoolean();
+        boolean done = (local != null && local.has("is_downloading_completed") && local.get("is_downloading_completed").getAsBoolean())
+                || (local != null && local.has("is_uploading_completed") && local.get("is_uploading_completed").getAsBoolean());
+        if (local != null && local.has("path")) {
+            String path = local.get("path").getAsString();
+            String name = transferPaths.get(path);
+            if (name != null) transferNames.put(fileId, name);
+        }
         String fileName = transferNames.getOrDefault(fileId, "media");
         TelegramTransport.Listener l = listener;
         if (l != null) l.onTransferProgress(new TransferProgress(fileName, completed, total, done));
@@ -418,9 +437,5 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
 
     private static final class TelegramRuntimeError extends RuntimeException {
         TelegramRuntimeError(TelegramError error) { super(error.getMessage(), error); }
-    }
-    private static final class TransferRequest {
-        final String path; final String fileName;
-        TransferRequest(String path, String fileName) { this.path = path; this.fileName = fileName; }
     }
 }
