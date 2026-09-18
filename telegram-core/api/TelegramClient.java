@@ -4,6 +4,7 @@ import java.util.concurrent.CompletableFuture;
 
 /** Stable public boundary. TDLib/transport classes never cross into the host application. */
 public interface TelegramClient {
+    CompletableFuture<Void> close();
     CompletableFuture<AuthorizationState> getAuthState();
     CompletableFuture<Void> submitPhoneNumber(String phoneNumber);
     CompletableFuture<Void> requestQrCodeAuthentication();
