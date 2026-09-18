@@ -28,8 +28,9 @@ final class TdJsonBridge {
             Method receive = find(c, "receive", double.class);
             Method execute = find(c, "execute", String.class);
             return new TdJsonBridge(create, send, receive, execute);
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("TDLib JsonClient is not on the runtime classpath", e);
+        } catch (Throwable e) {
+            throw new IllegalStateException(
+                    "TDLib JSONJava bridge is unavailable or failed to initialize", e);
         }
     }
 
