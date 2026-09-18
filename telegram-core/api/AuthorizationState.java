@@ -6,7 +6,6 @@ public final class AuthorizationState {
         UNKNOWN,
         WAIT_TDLIB_PARAMETERS,
         WAIT_PHONE,
-        WAIT_ENCRYPTION_KEY,
         WAIT_PREMIUM_PURCHASE,
         WAIT_EMAIL,
         WAIT_EMAIL_CODE,
