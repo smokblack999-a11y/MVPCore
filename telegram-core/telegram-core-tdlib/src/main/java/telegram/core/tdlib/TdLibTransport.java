@@ -91,19 +91,11 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
     }
 
     @Override public CompletableFuture<Void> setPhoneNumber(String phoneNumber) {
-        JsonObject settings = new JsonObject();
-        settings.addProperty("@type", "phoneNumberAuthenticationSettings");
-        settings.addProperty("allow_flash_call", false);
-        settings.addProperty("allow_missed_call", false);
-        settings.addProperty("is_current_phone_number", true);
-        settings.addProperty("has_unknown_phone_number", false);
-        settings.addProperty("allow_sms_retriever_api", false);
-        settings.add("firebase_authentication_settings", JsonNull.INSTANCE);
-        settings.add("authentication_tokens", new JsonArray());
-
+        // Keep the request minimal and let the pinned TDLib runtime apply its
+        // own default authentication settings. This avoids coupling the host
+        // to optional settings that may evolve between TDLib releases.
         JsonObject args = new JsonObject();
         args.addProperty("phone_number", required(phoneNumber, "phoneNumber"));
-        args.add("settings", settings);
         return request("setAuthenticationPhoneNumber", args).thenApply(v -> null);
     }
 
