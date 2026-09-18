@@ -6,6 +6,7 @@ source "$ROOT_DIR/TDLIB_VERSION"
 
 WORK_DIR="${WORK_DIR:-$ROOT_DIR/native/.work}"
 OUT_DIR="${OUT_DIR:-$ROOT_DIR/native/out}"
+TDLIB_REPOSITORY="${TDLIB_REPOSITORY:-https://github.com/tdlib/td.git}"
 rm -rf "$WORK_DIR" "$OUT_DIR"
 mkdir -p "$WORK_DIR" "$OUT_DIR"
 
