@@ -41,6 +41,18 @@ Authentication secrets, API credentials and runtime session/database data must n
 
 **Architecture: locked.**
 
-**Implementation: real TDLib adapter present, production integration gate not yet passed.**
+**Implementation: real TDLib JSON/JNI adapter present; production integration gate is still open.**
 
 The project deliberately does not call the module production-ready until native TDLib and real-account integration tests pass.
+
+## Current hardening status
+
+- TDLib revision is pinned in `TDLIB_VERSION` and the Android build regenerates JSONJava from that exact revision.
+- The generated official `org.drinkless.tdlib.JsonClient` is the only Android JSON binding; no handwritten duplicate is packaged.
+- Android CI verifies non-empty `libtdjsonjava.so` for arm64-v8a, armeabi-v7a, x86_64 and x86 and runs a real JNI smoke test on an emulator.
+- Authorization covers phone, code, email, password, registration, QR, premium-purchase, other-device-confirmation, READY, logout and close states.
+- Logout is separated from transport shutdown.
+- Media transfer progress tracks both upload and download completion.
+- The host can construct the client through `TdLibClientFactory` without touching generated TDLib classes.
+
+The remaining production gate is deliberately real-world: build the pinned native artifacts from a clean checkout, run the Android emulator smoke test, then perform a disposable real-account login and verify READY -> chats -> text -> photo/video on a physical device. API ID/hash and the account/session never belong in Git.
