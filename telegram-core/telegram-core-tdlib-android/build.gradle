@@ -8,6 +8,7 @@ android {
 
     defaultConfig {
         minSdk 23
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         consumerProguardFiles 'consumer-rules.pro'
     }
 
@@ -29,6 +30,9 @@ dependencies {
     api project(':telegram-core-api')
     api project(':telegram-core-tdlib')
     androidTestImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
 }
 
 tasks.register('verifyTdlibNative') {
@@ -37,12 +41,12 @@ tasks.register('verifyTdlibNative') {
         ['arm64-v8a', 'armeabi-v7a', 'x86_64', 'x86'].each { abi ->
             def lib = file("$root/$abi/libtdjsonjava.so")
             if (!lib.isFile() || lib.length() == 0) {
-                throw new GradleException("Missing real TDLib JSONJava native library: ${lib}")
+                throw new GradleException("Missing real TDLib JSONJava native library: " + lib)
             }
         }
         def javaFile = file('generated-src/main/java/org/drinkless/tdlib/JsonClient.java')
         if (!javaFile.isFile()) {
-            throw new GradleException("Missing generated TDLib JsonClient.java: ${javaFile}")
+            throw new GradleException("Missing generated TDLib JsonClient.java: " + javaFile)
         }
     }
 }
