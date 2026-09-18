@@ -114,6 +114,7 @@ jobs:
           name: telegram-core-tdlib-android
           path: |
             telegram-core/telegram-core-tdlib-android/build/outputs/aar/*.aar
+            telegram-core/telegram-core-sample-android/build/outputs/apk/debug/*.apk
             telegram-core/telegram-core-tdlib-android/generated-tdlib-commit.txt
             telegram-core/telegram-core-tdlib-android/generated-openssl-version.txt
             telegram-core/telegram-core-tdlib-android/generated-cmake-version.txt
