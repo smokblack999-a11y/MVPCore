@@ -16,6 +16,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: telegram-core-tdlib
+  cancel-in-progress: true
+
 jobs:
   build-tdlib-android:
     name: Build and runtime-test pinned TDLib JSONJava
