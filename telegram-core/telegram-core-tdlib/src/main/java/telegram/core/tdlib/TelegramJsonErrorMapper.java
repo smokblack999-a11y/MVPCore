@@ -47,7 +47,7 @@ final class TelegramJsonErrorMapper {
         } else {
             mapped = TelegramError.Code.INTERNAL;
         }
-        return new TelegramError(mapped, message);
+        return new TelegramError(mapped, code, message);
     }
 
     private static int safeInt(JsonObject object, String name) {
