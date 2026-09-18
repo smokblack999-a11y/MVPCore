@@ -480,6 +480,11 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
         }
 
         String type = type(update);
+        if (type.startsWith("authorizationState")) {
+            // getAuthorizationState returns the state directly; normal state changes arrive as updateAuthorizationState.
+            handleAuth(update);
+            return;
+        }
         switch (type) {
             case "updateAuthorizationState":
                 handleAuth(update.getAsJsonObject("authorization_state"));
