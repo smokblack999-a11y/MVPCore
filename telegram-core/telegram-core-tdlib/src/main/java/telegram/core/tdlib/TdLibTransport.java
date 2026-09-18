@@ -39,8 +39,6 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class TdLibTransport implements TelegramTransport, AutoCloseable {
     private static final Gson GSON = new Gson();
-    private static final long MAX_PHOTO_BYTES = 10L * 1024L * 1024L;
-
     private final TdLibTransportConfig config;
     private final TdJsonBridge td;
     private final int clientId;
@@ -131,8 +129,10 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
     }
 
     @Override public CompletableFuture<Void> resendCode() {
+        JsonObject reason = new JsonObject();
+        reason.addProperty("@type", "resendCodeReasonUserRequest");
         JsonObject args = new JsonObject();
-        args.add("reason", JsonNull.INSTANCE);
+        args.add("reason", reason);
         return request("resendAuthenticationCode", args).thenApply(v -> null);
     }
 
@@ -310,9 +310,6 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
         JsonObject content;
 
         if (mime.startsWith("image/")) {
-            if (file.length() > MAX_PHOTO_BYTES) {
-                return failed(new IllegalArgumentException("photo exceeds TDLib 10 MB limit"));
-            }
             JsonObject photo = inputFile(file);
             JsonObject inputPhoto = new JsonObject();
             inputPhoto.addProperty("@type", "inputPhoto");
