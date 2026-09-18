@@ -3,5 +3,6 @@ include ':mvp-core',
         ':stub-android',
         ':sample',
         ':mvp-core-processor',
-        ':stub-viewstate-binder',
-        ':telegram-core'
+        ':stub-viewstate-binder'
+
+includeBuild('telegram-core')
