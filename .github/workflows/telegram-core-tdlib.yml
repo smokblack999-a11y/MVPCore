@@ -93,6 +93,10 @@ jobs:
           done
           unzip -l "$aar" | grep -F "org/drinkless/tdlib/JsonClient.class"
 
+      - name: Build real-account acceptance APK
+        working-directory: telegram-core
+        run: gradle :telegram-core-sample-android:assembleDebug --stacktrace
+
       - name: Run real JNI smoke test on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
