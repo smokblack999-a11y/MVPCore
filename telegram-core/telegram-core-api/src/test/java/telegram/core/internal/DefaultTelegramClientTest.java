@@ -8,7 +8,6 @@ import telegram.core.api.Message;
 import telegram.core.api.Page;
 import telegram.core.api.SendOptions;
 import telegram.core.api.TelegramError;
-import telegram.core.api.TelegramTransport;
 import telegram.core.api.TransferProgress;
 
 import java.util.concurrent.CompletableFuture;
