@@ -25,6 +25,7 @@ public final class DefaultTelegramClient implements TelegramClient {
         this.transport = transport;
         transport.setListener(new TelegramTransport.Listener() {
             @Override public void onAuthorizationState(AuthorizationState value) {
+                if (value == null) return;
                 state = value;
                 for (EventListener listener : listeners) listener.onAuthStateChanged(value);
             }
@@ -37,6 +38,9 @@ public final class DefaultTelegramClient implements TelegramClient {
             @Override public void onError(TelegramError error) {
                 for (EventListener listener : listeners) listener.onError(error);
             }
+        });
+        transport.authorizationState().thenAccept(value -> {
+            if (value != null && value.type != AuthorizationState.Type.UNKNOWN) state = value;
         });
     }
 
