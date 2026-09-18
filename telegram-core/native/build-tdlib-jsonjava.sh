@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$ROOT_DIR/TDLIB_LOCK"
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT_DIR/TDLIB_VERSION"
 
-WORK_DIR="${WORK_DIR:-$ROOT_DIR/.work}"
-OUT_DIR="${OUT_DIR:-$ROOT_DIR/out}"
+WORK_DIR="${WORK_DIR:-$ROOT_DIR/native/.work}"
+OUT_DIR="${OUT_DIR:-$ROOT_DIR/native/out}"
 rm -rf "$WORK_DIR" "$OUT_DIR"
 mkdir -p "$WORK_DIR" "$OUT_DIR"
 
@@ -20,7 +20,6 @@ cp "$WORK_DIR/td/example/android/fetch-sdk.sh" "$WORK_DIR/"
 cp "$WORK_DIR/td/example/android/build-openssl.sh" "$WORK_DIR/"
 cp "$WORK_DIR/td/example/android/build-tdlib.sh" "$WORK_DIR/"
 
-# The official Dockerfile clones TDLib itself. COMMIT_HASH makes that clone deterministic.
 docker build \
   --platform linux/amd64 \
   --build-arg COMMIT_HASH="$TDLIB_COMMIT" \
