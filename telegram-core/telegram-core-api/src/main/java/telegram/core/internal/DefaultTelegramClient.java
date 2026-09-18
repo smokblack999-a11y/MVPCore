@@ -52,7 +52,6 @@ public final class DefaultTelegramClient implements TelegramClient {
         return transport.register(requireText(firstName, "firstName"), lastName == null ? "" : lastName);
     }
     @Override public CompletableFuture<Void> logout() { return transport.logout(); }
-    @Override public CompletableFuture<Void> logout() { return transport.logout(); }
     @Override public CompletableFuture<Void> close() { return transport.close(); }
     @Override public CompletableFuture<Page<Chat>> getChats(int limit, long cursor) { return transport.chats(clamp(limit), Math.max(0L, cursor)); }
     @Override public CompletableFuture<Page<Message>> getMessages(long chatId, int limit, long fromMessageId) {
