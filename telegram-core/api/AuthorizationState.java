@@ -13,6 +13,7 @@ public final class AuthorizationState {
         WAIT_PASSWORD,
         WAIT_REGISTRATION,
         READY,
+        LOGGING_OUT,
         CLOSING,
         CLOSED
     }
@@ -20,9 +21,7 @@ public final class AuthorizationState {
     public final Type type;
     public final String detail;
 
-    public AuthorizationState(Type type) {
-        this(type, null);
-    }
+    public AuthorizationState(Type type) { this(type, null); }
 
     public AuthorizationState(Type type, String detail) {
         if (type == null) throw new IllegalArgumentException("type required");
@@ -30,7 +29,5 @@ public final class AuthorizationState {
         this.detail = detail;
     }
 
-    public boolean isReady() {
-        return type == Type.READY;
-    }
+    public boolean isReady() { return type == Type.READY; }
 }
