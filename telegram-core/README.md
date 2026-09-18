@@ -29,7 +29,7 @@ Camera, gallery, GPS and EXIF are intentionally outside this module. They enter 
 - Pin and build an exact TDLib revision for Android.
 - Ship native libraries for the deliberately supported ABIs.
 - Validate every current authorization state against the real TDLib runtime.
-- Replace any legacy transport behavior that does not match the pinned TDLib schema.
+- Keep every JSON request aligned with the pinned TDLib schema.
 - Validate chat cache/update ordering, message pagination, media upload and send-result reconciliation.
 - Run real-account integration tests and clean CI from a fresh checkout.
 
@@ -51,8 +51,10 @@ The project deliberately does not call the module production-ready until native 
 - The generated official `org.drinkless.tdlib.JsonClient` is the only Android JSON binding; no handwritten duplicate is packaged.
 - Android CI verifies non-empty `libtdjsonjava.so` for arm64-v8a, armeabi-v7a, x86_64 and x86 and runs a real JNI smoke test on an emulator.
 - Authorization covers phone, code, email, password, registration, QR, premium-purchase, other-device-confirmation, READY, logout and close states.
+- The transport starts TDLib authorization immediately and replays the current public auth state to late listeners.
 - Logout is separated from transport shutdown.
+- TDLib byte fields are serialized as Base64, and media requests use the pinned nested inputPhoto/inputVideo/inputDocument schema.
 - Media transfer progress tracks both upload and download completion.
 - The host can construct the client through `TdLibClientFactory` without touching generated TDLib classes.
 
-The remaining production gate is deliberately real-world: build the pinned native artifacts from a clean checkout, run the Android emulator smoke test, then perform a disposable real-account login and verify READY -> chats -> text -> photo/video on a physical device. API ID/hash and the account/session never belong in Git.
+The remaining production gate is deliberately real-world: build the pinned native artifacts from a clean checkout, run the Android emulator smoke test, then perform a disposable real-account login and verify READY -> chats -> text -> photo/video on a physical device. The Android factory stores TDLib database state under noBackupFilesDir and protects the 32-byte database encryption key with Android Keystore. API ID/hash and the account/session never belong in Git.
