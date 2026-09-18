@@ -14,8 +14,12 @@ final class AuthorizationStateMapper {
         String type = auth.get("@type").getAsString();
         AuthorizationState.Type mapped;
         switch (type) {
+            case "authorizationStateWaitTdlibParameters":
+                mapped = AuthorizationState.Type.WAIT_TDLIB_PARAMETERS; break;
             case "authorizationStateWaitPhoneNumber":
                 mapped = AuthorizationState.Type.WAIT_PHONE; break;
+            case "authorizationStateWaitEncryptionKey":
+                mapped = AuthorizationState.Type.WAIT_ENCRYPTION_KEY; break;
             case "authorizationStateWaitPremiumPurchase":
                 mapped = AuthorizationState.Type.WAIT_PREMIUM_PURCHASE; break;
             case "authorizationStateWaitEmailAddress":
