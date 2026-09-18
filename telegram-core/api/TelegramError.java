@@ -10,14 +10,22 @@ public final class TelegramError extends Exception {
         PERMISSION_DENIED,
         MEDIA_FAILED,
         INVALID_ARGUMENT,
+        NATIVE_LIBRARY,
+        CLOSED,
         INTERNAL
     }
 
     public final Code code;
+    public final int tdlibCode;
 
     public TelegramError(Code code, String message) {
+        this(code, 0, message);
+    }
+
+    public TelegramError(Code code, int tdlibCode, String message) {
         super(message == null ? code.name() : message);
         if (code == null) throw new IllegalArgumentException("code required");
         this.code = code;
+        this.tdlibCode = tdlibCode;
     }
 }
