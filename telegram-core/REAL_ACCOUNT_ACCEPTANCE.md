@@ -1,28 +1,66 @@
 # Real-account acceptance gate
 
-This module is not considered production-ready until a real Android device passes the following sequence with the pinned native artifact:
+This module is not considered production-ready until a real Android device passes the following sequence with the exact pinned native artifact:
 
 1. Native `libtdjsonjava.so` loads without `UnsatisfiedLinkError`.
-2. TDLib emits `authorizationStateWaitTdlibParameters`; the transport automatically supplies initialization parameters.
-3. Fresh session reaches `WAIT_PHONE`.
-4. User enters a phone number; the transport reaches `WAIT_CODE`.
-5. User enters the Telegram login code; if enabled, the flow reaches `WAIT_PASSWORD`.
-6. Correct 2FA password reaches `READY`.
-7. Existing session restart returns directly to `READY` without asking for the phone again.
-8. Main chat list loads and returns stable chat IDs/titles.
-9. Chat history loads in TDLib's documented reverse-chronological order.
-10. Text message sends and an outgoing message/update is observed.
-11. Local JPEG/PNG sends as a photo and produces transfer progress.
-12. Local MP4 sends as a video and produces transfer progress.
-13. Process restart preserves the encrypted TDLib database/session.
-14. Logout reaches `CLOSED` and the next login starts from the expected authorization state.
+2. TDLib starts from `authorizationStateWaitTdlibParameters`; the transport supplies initialization parameters using the pinned JSON schema.
+3. A fresh session reaches `WAIT_PHONE`.
+4. A phone number in international format reaches `WAIT_CODE`.
+5. The Telegram login code is accepted; accounts with 2-step verification reach `WAIT_PASSWORD`.
+6. The correct 2FA password reaches `READY`.
+7. Process restart with the same account ID reuses the same encrypted local database and returns to the correct authorization state without asking for the phone again.
+8. The main chat list loads in stable TDLib order.
+9. Chat history returns in reverse chronological order; pagination does not duplicate the boundary message.
+10. Text sends successfully and the outgoing message/update is observable.
+11. A local JPEG/PNG sends through the real `inputMessagePhoto -> inputPhoto -> inputFileLocal` chain and emits upload progress.
+12. A local H.264/MPEG-4 MP4 sends through `inputMessageVideo -> inputVideo -> inputFileLocal` and emits upload progress.
+13. Android Keystore-backed database key survives process restart and does not depend on exported app storage.
+14. Graceful `close()` waits for `authorizationStateClosed` or fails only after the configured close timeout.
+15. `logOut` reaches `authorizationStateClosed`; the next client instance for the same account ID starts a new authorization session.
 
-## Required credentials
+## Runtime setup
 
-The host application supplies its own Telegram `api_id` and `api_hash` obtained from Telegram. They are runtime configuration, never source-controlled credentials.
+Use a real Telegram application `api_id` and `api_hash` obtained for the client. Supply them at runtime; do not commit them.
 
-The account phone number, authentication code, 2FA password, and database encryption key are runtime secrets. They must never appear in logs, tests, Git history, or CI artifacts.
+For Android, construct the client through `AndroidTelegramClientFactory`:
+
+```java
+TelegramClient client = AndroidTelegramClientFactory.create(
+    context,
+    "personal",
+    runtimeApiId,
+    runtimeApiHash
+);
+
+client.addListener(new TelegramClient.EventListener() {
+    @Override public void onAuthStateChanged(AuthorizationState state) {
+        // Render WAIT_PHONE / WAIT_CODE / WAIT_PASSWORD / READY.
+    }
+
+    @Override public void onMessage(TelegramClient.Message message) { }
+
+    @Override public void onTransferProgress(TransferProgress progress) { }
+
+    @Override public void onError(TelegramError error) { }
+});
+```
+
+Then drive only the public API:
+
+`WAIT_PHONE -> submitPhoneNumber -> WAIT_CODE -> submitCode -> [WAIT_PASSWORD -> submitPassword] -> READY`
+
+After `READY`, verify:
+
+`getChats -> getMessages -> sendText -> sendMedia(photo) -> sendMedia(video)`
+
+## Secrets and evidence
+
+The account phone number, login code, 2FA password and TDLib database encryption key are runtime secrets. Never place them in Git, test fixtures, CI logs, screenshots or artifacts.
+
+The acceptance device should use a disposable test account or another account whose owner explicitly approves the test. Do not automate or store the Telegram login code outside the test UI.
 
 ## Why this gate is strict
 
-TDLib is asynchronous. Authorization is driven by `updateAuthorizationState`, and all updates must be processed in receive order. Chat/message/media functionality is tested only after `READY`; a successful Java compilation is not evidence of a working Telegram client.
+TDLib is asynchronous and correctness depends on processing updates in receive order. `updateAuthorizationState` controls authentication, `updateNewChat` precedes chat identifiers, and `getChatHistory` can return fewer than the requested limit even when more history exists. A successful Java build is therefore not evidence of a working Telegram client.
+
+**Status: implementation complete enough for physical-device acceptance; real-account gate remains open until the device sequence above is observed.**
