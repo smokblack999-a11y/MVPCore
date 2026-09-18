@@ -41,7 +41,7 @@ public final class AndroidDatabaseKeyStore {
         String safeId = safeAccountId(accountId);
         File file = keyFile(safeId);
         try {
-            SecretKey master = loadOrCreateMasterKey(safeId);
+            SecretKey master = loadOrCreateMasterKey(safeId, file.isFile());
             if (file.isFile()) return decrypt(master, read(file));
 
             byte[] databaseKey = new byte[32];
@@ -68,7 +68,7 @@ public final class AndroidDatabaseKeyStore {
         }
     }
 
-    private SecretKey loadOrCreateMasterKey(String safeId) throws Exception {
+    private SecretKey loadOrCreateMasterKey(String safeId, boolean existingRecord) throws Exception {
         KeyStore keyStore = KeyStore.getInstance(KEYSTORE);
         keyStore.load(null);
         String alias = KEY_PREFIX + safeId;
@@ -76,6 +76,9 @@ public final class AndroidDatabaseKeyStore {
             java.security.Key key = keyStore.getKey(alias, null);
             if (!(key instanceof SecretKey)) throw new IllegalStateException("Invalid Android Keystore key");
             return (SecretKey) key;
+        }
+        if (existingRecord) {
+            throw new IllegalStateException("Encrypted Telegram database key exists but Android Keystore key is missing");
         }
         KeyGenerator generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE);
         generator.init(new KeyGenParameterSpec.Builder(

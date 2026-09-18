@@ -496,6 +496,12 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
             case "updateChatPosition":
                 handleChatPosition(update);
                 break;
+            case "updateChatAddedToList":
+                handleChatAddedToList(update);
+                break;
+            case "updateChatRemovedFromList":
+                handleChatRemovedFromList(update);
+                break;
             case "updateChatDraftMessage":
                 cachePositions(update.getAsJsonArray("positions"), update.get("chat_id").getAsLong());
                 break;
@@ -589,6 +595,25 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
         chatOrderById.put(chatId, order);
     }
 
+    private void handleChatAddedToList(JsonObject update) {
+        long chatId = update.get("chat_id").getAsLong();
+        JsonObject position = update.has("position") && update.get("position").isJsonObject()
+                ? update.getAsJsonObject("position") : null;
+        if (position == null || !isMainList(position.get("list"))) return;
+        long order = parseInt64(position.get("order"));
+        if (order == 0L) chatOrderById.remove(chatId);
+        else chatOrderById.put(chatId, order);
+    }
+
+    private void handleChatRemovedFromList(JsonObject update) {
+        long chatId = update.get("chat_id").getAsLong();
+        JsonObject list = update.has("chat_list") && update.get("chat_list").isJsonObject()
+                ? update.getAsJsonObject("chat_list") : null;
+        if (isMainList(list)) {
+            chatOrderById.remove(chatId);
+        }
+    }
+
     private void cacheMainPositions(JsonObject chatJson, long chatId) {
         if (chatJson == null) return;
         if (chatJson.has("positions") && chatJson.get("positions").isJsonArray()) {
@@ -641,26 +666,38 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
         int fileId = file.has("id") ? file.get("id").getAsInt() : 0;
         JsonObject local = file.has("local") && file.get("local").isJsonObject()
                 ? file.getAsJsonObject("local") : null;
+        JsonObject remote = file.has("remote") && file.get("remote").isJsonObject()
+                ? file.getAsJsonObject("remote") : null;
+
         long downloaded = local != null && local.has("downloaded_size")
                 ? local.get("downloaded_size").getAsLong() : 0L;
-        long uploaded = local != null && local.has("uploaded_size")
-                ? local.get("uploaded_size").getAsLong() : 0L;
+        long uploaded = remote != null && remote.has("uploaded_size")
+                ? remote.get("uploaded_size").getAsLong() : 0L;
         long completed = Math.max(downloaded, uploaded);
-        long total = file.has("size") ? file.get("size").getAsLong()
-                : (file.has("expected_size") ? file.get("expected_size").getAsLong() : 0L);
-        boolean done = local != null && (
-                (local.has("is_downloading_completed") && local.get("is_downloading_completed").getAsBoolean())
-                        || (local.has("is_uploading_completed") && local.get("is_uploading_completed").getAsBoolean()));
-        if (local != null && local.has("path")) {
-            String path = local.get("path").getAsString();
-            String name = transferPaths.get(path);
+
+        long total = remote != null && remote.has("uploaded_size") && remote.has("unique_id")
+                ? Math.max(file.has("size") ? file.get("size").getAsLong() : 0L, uploaded)
+                : (file.has("size") ? file.get("size").getAsLong()
+                : (file.has("expected_size") ? file.get("expected_size").getAsLong() : 0L));
+
+        boolean downloadingDone = local != null && local.has("is_downloading_completed")
+                && local.get("is_downloading_completed").getAsBoolean();
+        boolean uploadingDone = remote != null && remote.has("is_uploading_completed")
+                && remote.get("is_uploading_completed").getAsBoolean();
+        boolean done = downloadingDone || uploadingDone;
+
+        String localPath = local != null && local.has("path") ? local.get("path").getAsString() : "";
+        if (!localPath.isEmpty()) {
+            String name = transferPaths.get(localPath);
             if (name != null) transferNames.put(fileId, name);
         }
+
         String fileName = transferNames.getOrDefault(fileId, "media");
         TelegramTransport.Listener l = listener;
         if (l != null) l.onTransferProgress(new TransferProgress(fileName, completed, total, done));
-        if (done && local != null && local.has("path")) {
-            transferPaths.remove(local.get("path").getAsString());
+
+        if (done && !localPath.isEmpty()) {
+            transferPaths.remove(localPath);
             transferNames.remove(fileId);
         }
     }
