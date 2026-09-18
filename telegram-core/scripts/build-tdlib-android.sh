@@ -28,6 +28,11 @@ ANDROID_STL="$(get_pin ANDROID_STL)"
 CMAKE_BIN="$ANDROID_SDK_ROOT/cmake/$CMAKE_VERSION/bin"
 NDK_HOME="$ANDROID_SDK_ROOT/ndk/$NDK_VERSION"
 
+test -d "$ANDROID_SDK_ROOT/platforms/$ANDROID_PLATFORM" || {
+  echo "Missing pinned Android SDK platform: $ANDROID_PLATFORM" >&2
+  exit 1
+}
+
 for required in "$CMAKE_BIN/cmake" "$NDK_HOME/ndk-build"; do
   test -x "$required" || { echo "Missing pinned Android tool: $required" >&2; exit 1; }
 done
@@ -71,3 +76,8 @@ printf '%s\n' "$OPENSSL_VERSION" > "$OUT_DIR/generated-openssl-version.txt"
 printf '%s\n' "$CMAKE_VERSION" > "$OUT_DIR/generated-cmake-version.txt"
 printf '%s\n' "$NDK_VERSION" > "$OUT_DIR/generated-ndk-version.txt"
 printf '%s\n' "$ANDROID_PLATFORM" > "$OUT_DIR/generated-android-platform.txt"
+
+: > "$OUT_DIR/generated-native-sha256.txt"
+for abi in arm64-v8a armeabi-v7a x86_64 x86; do
+  sha256sum "$OUT_DIR/generated-jni-libs/$abi/libtdjsonjava.so" >> "$OUT_DIR/generated-native-sha256.txt"
+done
