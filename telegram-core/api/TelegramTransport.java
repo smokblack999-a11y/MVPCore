@@ -17,7 +17,7 @@ public interface TelegramTransport {
     CompletableFuture<Void> resendCode();
     CompletableFuture<Void> setPassword(String password);
     CompletableFuture<Void> register(String firstName, String lastName);
-    default CompletableFuture<Void> logout() { return close(); }
+    CompletableFuture<Void> logout();
     CompletableFuture<Void> close();
     CompletableFuture<Page<Chat>> chats(int limit, long cursor);
     CompletableFuture<Page<Message>> messages(long chatId, int limit, long fromMessageId);
