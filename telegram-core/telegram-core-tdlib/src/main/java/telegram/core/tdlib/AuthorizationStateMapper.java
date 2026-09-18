@@ -3,7 +3,7 @@ package telegram.core.tdlib;
 import com.google.gson.JsonObject;
 import telegram.core.api.AuthorizationState;
 
-/** Maps pinned TDLib authorization states to the stable public API. */
+/** Maps the exact pinned TDLib authorization states to the stable public API. */
 final class AuthorizationStateMapper {
     private AuthorizationStateMapper() { }
 
@@ -18,8 +18,6 @@ final class AuthorizationStateMapper {
                 mapped = AuthorizationState.Type.WAIT_TDLIB_PARAMETERS; break;
             case "authorizationStateWaitPhoneNumber":
                 mapped = AuthorizationState.Type.WAIT_PHONE; break;
-            case "authorizationStateWaitEncryptionKey":
-                mapped = AuthorizationState.Type.WAIT_ENCRYPTION_KEY; break;
             case "authorizationStateWaitPremiumPurchase":
                 mapped = AuthorizationState.Type.WAIT_PREMIUM_PURCHASE; break;
             case "authorizationStateWaitEmailAddress":
