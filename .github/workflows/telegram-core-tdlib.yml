@@ -70,7 +70,7 @@ jobs:
         working-directory: telegram-core/telegram-core-tdlib-android
         run: |
           set -euo pipefail
-          test "$(cat generated-tdlib-commit.txt)" = "022d60202e446ad1287b9fb68e687c8a0760788b"
+          test "$(cat generated-tdlib-commit.txt)" = "bc9c263e2bfee06aaab41e82db51a103376030bc"
           for abi in arm64-v8a armeabi-v7a x86_64 x86; do
             test -s "generated-jni-libs/$abi/libtdjsonjava.so"
             file "generated-jni-libs/$abi/libtdjsonjava.so"
