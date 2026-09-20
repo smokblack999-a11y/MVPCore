@@ -64,8 +64,8 @@ jobs:
         run: |
           set -euo pipefail
           test -f TDLIB_VERSION
-          grep -Fx 'TDLIB_RELEASE=1.8.66' TDLIB_VERSION
-          grep -Fx 'TDLIB_COMMIT=022d60202e446ad1287b9fb68e687c8a0760788b' TDLIB_VERSION
+          grep -Fx 'TDLIB_RELEASE=1.8.67' TDLIB_VERSION
+          grep -Fx 'TDLIB_COMMIT=bc9c263e2bfee06aaab41e82db51a103376030bc' TDLIB_VERSION
           grep -Fx 'TDLIB_INTERFACE=JSONJava' TDLIB_VERSION
           grep -Fx 'ANDROID_NDK_VERSION=23.2.8568313' TDLIB_VERSION
           grep -Fx 'ANDROID_PLATFORM=android-34' TDLIB_VERSION
@@ -88,7 +88,7 @@ jobs:
         working-directory: telegram-core/telegram-core-tdlib-android
         run: |
           set -euo pipefail
-          test "$(cat generated-tdlib-commit.txt)" = "022d60202e446ad1287b9fb68e687c8a0760788b"
+          test "$(cat generated-tdlib-commit.txt)" = "bc9c263e2bfee06aaab41e82db51a103376030bc"
           for abi in arm64-v8a armeabi-v7a x86_64 x86; do
             test -s "generated-jni-libs/$abi/libtdjsonjava.so"
             file "generated-jni-libs/$abi/libtdjsonjava.so"
