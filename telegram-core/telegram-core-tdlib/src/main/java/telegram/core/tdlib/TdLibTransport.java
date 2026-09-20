@@ -18,13 +18,11 @@ import telegram.core.api.TransferProgress;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -270,12 +268,15 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
         args.addProperty("only_local", false);
 
         return request("getChatHistory", args).thenApply(response -> {
+            int responseCount = response.has("messages") && response.get("messages").isJsonArray()
+                    ? response.getAsJsonArray("messages").size() : 0;
             List<Message> raw = new ArrayList<>(MessageJson.decodeList(response));
             if (cursor != 0L) {
                 raw.removeIf(message -> message.id == cursor);
             }
             long next = raw.isEmpty() ? cursor : raw.get(raw.size() - 1).id;
-            return new Page<>(raw, next, !raw.isEmpty());
+            boolean hasMore = responseCount >= requestLimit && !raw.isEmpty();
+            return new Page<>(raw, next, hasMore);
         });
     }
 
@@ -284,6 +285,8 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
         JsonObject content = new JsonObject();
         content.addProperty("@type", "inputMessageText");
         content.add("text", formatted(required(text, "text")));
+        content.add("link_preview_options", JsonNull.INSTANCE);
+        content.addProperty("clear_draft", false);
         JsonObject args = sendBase(chatId, options);
         args.add("input_message_content", content);
         return request("sendMessage", args).thenApply(MessageJson::decode);
@@ -305,39 +308,29 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
         JsonObject content;
 
         if (mime.startsWith("image/")) {
-            JsonObject photo = inputFile(file);
-            JsonObject inputPhoto = new JsonObject();
-            inputPhoto.addProperty("@type", "inputPhoto");
-            inputPhoto.add("photo", photo);
-            inputPhoto.add("thumbnail", JsonNull.INSTANCE);
-            inputPhoto.add("video", JsonNull.INSTANCE);
-            inputPhoto.add("added_sticker_file_ids", new JsonArray());
-            inputPhoto.addProperty("width", 0);
-            inputPhoto.addProperty("height", 0);
-
             content = new JsonObject();
             content.addProperty("@type", "inputMessagePhoto");
-            content.add("photo", inputPhoto);
+            content.add("photo", inputFile(file));
+            content.add("thumbnail", JsonNull.INSTANCE);
+            content.add("added_sticker_file_ids", new JsonArray());
+            content.addProperty("width", 0);
+            content.addProperty("height", 0);
             content.add("caption", formatted(options == null ? "" : options.caption));
             content.addProperty("show_caption_above_media", false);
             content.add("self_destruct_type", JsonNull.INSTANCE);
             content.addProperty("has_spoiler", false);
         } else if (mime.startsWith("video/")) {
-            JsonObject video = new JsonObject();
-            video.addProperty("@type", "inputVideo");
-            video.add("video", inputFile(file));
-            video.add("thumbnail", JsonNull.INSTANCE);
-            video.add("cover", JsonNull.INSTANCE);
-            video.addProperty("start_timestamp", 0);
-            video.add("added_sticker_file_ids", new JsonArray());
-            video.addProperty("duration", 0);
-            video.addProperty("width", 0);
-            video.addProperty("height", 0);
-            video.addProperty("supports_streaming", true);
-
             content = new JsonObject();
             content.addProperty("@type", "inputMessageVideo");
-            content.add("video", video);
+            content.add("video", inputFile(file));
+            content.add("thumbnail", JsonNull.INSTANCE);
+            content.add("cover", JsonNull.INSTANCE);
+            content.addProperty("start_timestamp", 0);
+            content.add("added_sticker_file_ids", new JsonArray());
+            content.addProperty("duration", 0);
+            content.addProperty("width", 0);
+            content.addProperty("height", 0);
+            content.addProperty("supports_streaming", true);
             content.add("caption", formatted(options == null ? "" : options.caption));
             content.addProperty("show_caption_above_media", false);
             content.add("self_destruct_type", JsonNull.INSTANCE);
@@ -527,6 +520,16 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
                     l.onMessage(MessageJson.decode(update.getAsJsonObject("message")));
                 }
                 break;
+            case "updateMessageSendSucceeded":
+                handleMessageSendSucceeded(update);
+                break;
+            case "updateMessageSendFailed":
+                handleMessageSendFailed(update);
+                break;
+            case "updateMessageSendAcknowledged":
+                // Intermediate acknowledgement; the final message is emitted
+                // by updateMessageSendSucceeded.
+                break;
             case "updateFile":
                 handleFile(update.getAsJsonObject("file"));
                 break;
@@ -677,6 +680,30 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
         if (chat != null && chat.id != 0L) chatCache.put(chat.id, chat);
     }
 
+    private void handleMessageSendSucceeded(JsonObject update) {
+        TelegramTransport.Listener l = listener;
+        if (l != null && update.has("message") && update.get("message").isJsonObject()) {
+            l.onMessage(MessageJson.decode(update.getAsJsonObject("message")));
+        }
+    }
+
+    private void handleMessageSendFailed(JsonObject update) {
+        if (update == null) return;
+        int code = safeInt(update, "error_code");
+        String message = update.has("error_message")
+                ? update.get("error_message").getAsString()
+                : "Telegram message send failed";
+        JsonObject error = new JsonObject();
+        error.addProperty("code", code);
+        error.addProperty("message", message);
+        notifyError(TelegramJsonErrorMapper.fromJson(error));
+    }
+
+    private static int safeInt(JsonObject object, String name) {
+        try { return object.has(name) ? object.get(name).getAsInt() : 0; }
+        catch (RuntimeException ignored) { return 0; }
+    }
+
     private void handleFile(JsonObject file) {
         if (file == null) return;
         int fileId = file.has("id") ? file.get("id").getAsInt() : 0;
@@ -691,10 +718,11 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
                 ? remote.get("uploaded_size").getAsLong() : 0L;
         long completed = Math.max(downloaded, uploaded);
 
-        long total = remote != null && remote.has("uploaded_size") && remote.has("unique_id")
-                ? Math.max(file.has("size") ? file.get("size").getAsLong() : 0L, uploaded)
-                : (file.has("size") ? file.get("size").getAsLong()
-                : (file.has("expected_size") ? file.get("expected_size").getAsLong() : 0L));
+        long declaredSize = file.has("size") ? file.get("size").getAsLong() : 0L;
+        if (declaredSize <= 0L && file.has("expected_size")) {
+            declaredSize = file.get("expected_size").getAsLong();
+        }
+        long total = Math.max(declaredSize, completed);
 
         boolean downloadingDone = local != null && local.has("is_downloading_completed")
                 && local.get("is_downloading_completed").getAsBoolean();
