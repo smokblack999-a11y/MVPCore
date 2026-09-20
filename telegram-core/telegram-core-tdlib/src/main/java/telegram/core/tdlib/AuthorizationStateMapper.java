@@ -16,6 +16,8 @@ final class AuthorizationStateMapper {
         switch (type) {
             case "authorizationStateWaitTdlibParameters":
                 mapped = AuthorizationState.Type.WAIT_TDLIB_PARAMETERS; break;
+            case "authorizationStateWaitEncryptionKey":
+                mapped = AuthorizationState.Type.WAIT_ENCRYPTION_KEY; break;
             case "authorizationStateWaitPhoneNumber":
                 mapped = AuthorizationState.Type.WAIT_PHONE; break;
             case "authorizationStateWaitPremiumPurchase":
