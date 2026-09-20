@@ -2,8 +2,8 @@
 
 This module is intentionally pinned to one exact upstream TDLib source revision.
 
-- TDLib release: `v1.8.66`
-- TDLib source commit: `022d60202e446ad1287b9fb68e687c8a0760788b`
+- TDLib release: `v1.8.67`
+- TDLib source commit: `bc9c263e2bfee06aaab41e82db51a103376030bc`
 - Android NDK: `23.2.8568313`
 - Android CMake: `3.22.1`
 - Android API floor used by the upstream build script: `16` (64-bit OpenSSL builds use API 21)
