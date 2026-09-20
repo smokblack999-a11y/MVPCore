@@ -61,7 +61,7 @@ A local file is represented by `inputFileLocal`. `inputMessagePhoto.photo`, `inp
 
 ## Native build
 
-TDLib's official Android example builds native libraries and Java/JSON bindings from source. The project pins an exact TDLib source commit and builds reproducibly in CI. The current lock is `telegram-core/native/TDLIB_LOCK`; the current build interface is `JSONJava`, producing `JsonClient.java` plus `libtdjsonjava.so`.
+TDLib's official Android example builds native libraries and Java/JSON bindings from source. The project pins an exact TDLib source commit and builds reproducibly in CI. The current lock is `telegram-core/TDLIB_VERSION`; the current build interface is `JSONJava`, producing `JsonClient.java` plus `libtdjsonjava.so`.
 
 ## Non-negotiable rules
 
