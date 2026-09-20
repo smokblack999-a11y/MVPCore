@@ -54,8 +54,22 @@ jobs:
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-34" "build-tools;35.0.0" "cmake;3.22.1" "ndk;23.2.8568313"
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends gperf
+          sudo apt-get install -y --no-install-recommends gperf php-cli perl
           gperf --version
+          php --version
+          perl --version
+
+      - name: Verify pinned build environment
+        working-directory: telegram-core
+        run: |
+          set -euo pipefail
+          test -f TDLIB_VERSION
+          grep -Fx 'TDLIB_RELEASE=1.8.66' TDLIB_VERSION
+          grep -Fx 'TDLIB_COMMIT=022d60202e446ad1287b9fb68e687c8a0760788b' TDLIB_VERSION
+          grep -Fx 'TDLIB_INTERFACE=JSONJava' TDLIB_VERSION
+          grep -Fx 'ANDROID_NDK_VERSION=23.2.8568313' TDLIB_VERSION
+          grep -Fx 'ANDROID_PLATFORM=android-34' TDLIB_VERSION
+          grep -Fx 'CMAKE_VERSION=3.22.1' TDLIB_VERSION
 
       - name: Build pinned TDLib JSONJava
         working-directory: telegram-core
