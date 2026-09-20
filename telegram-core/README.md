@@ -47,13 +47,13 @@ The project deliberately does not call the module production-ready until native 
 
 ## Current hardening status
 
-- TDLib v1.8.67 is pinned in `TDLIB_VERSION`, and the Android build regenerates JSONJava from that exact immutable commit.
+- TDLib v1.8.67 is pinned in `TDLIB_VERSION` at immutable commit `bc9c263e2bfee06aaab41e82db51a103376030bc`, and the Android build regenerates JSONJava from that exact source.
 - The generated official `org.drinkless.tdlib.JsonClient` is the only Android JSON binding; no handwritten duplicate is packaged.
 - Android CI verifies non-empty `libtdjsonjava.so` for arm64-v8a, armeabi-v7a, x86_64 and x86 and runs a real JNI smoke test on an emulator.
 - Authorization covers phone, code, email, password, registration, QR, premium-purchase, other-device-confirmation, READY, logout and close states.
 - The transport starts TDLib authorization immediately and replays the current public auth state to late listeners.
 - Logout is separated from transport shutdown.
-- TDLib byte fields are serialized as Base64, and media requests use the pinned nested inputPhoto/inputVideo/inputDocument schema.
+- TDLib byte fields are serialized as Base64, and media requests use the pinned InputFile-based inputMessagePhoto/inputMessageVideo schema and the matching inputMessageDocument schema.
 - Media transfer progress tracks both upload and download completion.
 - The host can construct the client through `TdLibClientFactory` without touching generated TDLib classes.
 
