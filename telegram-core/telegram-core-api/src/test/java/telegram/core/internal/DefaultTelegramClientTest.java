@@ -56,6 +56,7 @@ final class DefaultTelegramClientTest {
         public CompletableFuture<Void> resendCode() { return ok(); }
         public CompletableFuture<Void> setPassword(String value) { return ok(); }
         public CompletableFuture<Void> register(String firstName, String lastName) { return ok(); }
+        public CompletableFuture<Void> logout() { return ok(); }
         public CompletableFuture<Void> close() { return ok(); }
         public CompletableFuture<Page<Chat>> chats(int limit, long cursor) { return CompletableFuture.completedFuture(new Page<Chat>(null, 0, false)); }
         public CompletableFuture<Page<Message>> messages(long chatId, int limit, long fromMessageId) {
