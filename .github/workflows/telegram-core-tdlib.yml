@@ -71,6 +71,10 @@ jobs:
           grep -Fx 'ANDROID_PLATFORM=android-34' TDLIB_VERSION
           grep -Fx 'CMAKE_VERSION=3.22.1' TDLIB_VERSION
 
+      - name: Run deterministic JVM contract tests
+        working-directory: telegram-core
+        run: gradle :telegram-core-api:test :telegram-core-tdlib:test --stacktrace
+
       - name: Build pinned TDLib JSONJava
         working-directory: telegram-core
         env:
