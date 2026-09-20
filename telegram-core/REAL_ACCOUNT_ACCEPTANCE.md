@@ -25,6 +25,8 @@ Use a real Telegram application `api_id` and `api_hash` obtained for the client.
 For Android, construct the client through `AndroidTelegramClientFactory`:
 
 ```java
+import telegram.core.api.Message;
+
 TelegramClient client = AndroidTelegramClientFactory.create(
     context,
     "personal",
@@ -37,7 +39,7 @@ client.addListener(new TelegramClient.EventListener() {
         // Render WAIT_PHONE / WAIT_CODE / WAIT_PASSWORD / READY.
     }
 
-    @Override public void onMessage(TelegramClient.Message message) { }
+    @Override public void onMessage(Message message) { }
 
     @Override public void onTransferProgress(TransferProgress progress) { }
 
