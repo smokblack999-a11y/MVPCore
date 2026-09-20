@@ -11,6 +11,7 @@ final class AuthorizationStateMapperTest {
     @Test
     void mapsEveryPinnedTdLibAuthorizationState() {
         assertType("authorizationStateWaitTdlibParameters", AuthorizationState.Type.WAIT_TDLIB_PARAMETERS);
+        assertType("authorizationStateWaitEncryptionKey", AuthorizationState.Type.WAIT_ENCRYPTION_KEY);
         assertType("authorizationStateWaitPhoneNumber", AuthorizationState.Type.WAIT_PHONE);
         assertType("authorizationStateWaitPremiumPurchase", AuthorizationState.Type.WAIT_PREMIUM_PURCHASE);
         assertType("authorizationStateWaitEmailAddress", AuthorizationState.Type.WAIT_EMAIL);
