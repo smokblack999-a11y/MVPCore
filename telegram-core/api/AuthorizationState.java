@@ -5,6 +5,7 @@ public final class AuthorizationState {
     public enum Type {
         UNKNOWN,
         WAIT_TDLIB_PARAMETERS,
+        WAIT_ENCRYPTION_KEY,
         WAIT_PHONE,
         WAIT_PREMIUM_PURCHASE,
         WAIT_EMAIL,
