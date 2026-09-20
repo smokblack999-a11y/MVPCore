@@ -336,15 +336,10 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
             content.add("self_destruct_type", JsonNull.INSTANCE);
             content.addProperty("has_spoiler", false);
         } else {
-            JsonObject document = new JsonObject();
-            document.addProperty("@type", "inputDocument");
-            document.add("document", inputFile(file));
-            document.add("thumbnail", JsonNull.INSTANCE);
-            document.addProperty("disable_content_type_detection", false);
-
             content = new JsonObject();
             content.addProperty("@type", "inputMessageDocument");
-            content.add("document", document);
+            content.add("document", inputFile(file));
+            content.add("thumbnail", JsonNull.INSTANCE);
             content.add("caption", formatted(options == null ? "" : options.caption));
         }
 
