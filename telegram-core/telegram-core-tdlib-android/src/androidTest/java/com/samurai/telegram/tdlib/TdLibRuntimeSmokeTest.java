@@ -20,5 +20,6 @@ public class TdLibRuntimeSmokeTest {
         JSONObject response = new JSONObject(String.valueOf(raw));
         assertTrue("TDLib execute() did not return an option", "optionValueString".equals(response.optString("@type")));
         assertTrue("TDLib version is empty", response.optString("value").length() > 0);
+        assertTrue("Unexpected TDLib version: " + response.optString("value"), "1.8.67".equals(response.optString("value")));
     }
 }
