@@ -263,7 +263,10 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
         args.addProperty("chat_id", chatId);
         args.addProperty("from_message_id", cursor);
         args.addProperty("offset", 0);
-        args.addProperty("limit", safeLimit);
+        // TDLib includes from_message_id when cursor != 0. Ask for one extra
+        // item so a limit=1 page can still advance without dropping history.
+        int requestLimit = cursor == 0L ? safeLimit : Math.min(100, safeLimit + 1);
+        args.addProperty("limit", requestLimit);
         args.addProperty("only_local", false);
 
         return request("getChatHistory", args).thenApply(response -> {
