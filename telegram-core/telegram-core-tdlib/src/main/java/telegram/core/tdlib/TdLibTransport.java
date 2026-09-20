@@ -711,25 +711,25 @@ public final class TdLibTransport implements TelegramTransport, AutoCloseable {
                 ? local.get("downloaded_size").getAsLong() : 0L;
         long uploaded = remote != null && remote.has("uploaded_size")
                 ? remote.get("uploaded_size").getAsLong() : 0L;
-        long completed = Math.max(downloaded, uploaded);
+
+        String localPath = local != null && local.has("path") ? local.get("path").getAsString() : "";
+        String mappedName = localPath.isEmpty() ? null : transferPaths.get(localPath);
+        boolean outgoingUpload = mappedName != null;
 
         long declaredSize = file.has("size") ? file.get("size").getAsLong() : 0L;
         if (declaredSize <= 0L && file.has("expected_size")) {
             declaredSize = file.get("expected_size").getAsLong();
         }
-        long total = Math.max(declaredSize, completed);
 
+        long completed = outgoingUpload ? uploaded : downloaded;
+        long total = Math.max(declaredSize, completed);
         boolean downloadingDone = local != null && local.has("is_downloading_completed")
                 && local.get("is_downloading_completed").getAsBoolean();
         boolean uploadingDone = remote != null && remote.has("is_uploading_completed")
                 && remote.get("is_uploading_completed").getAsBoolean();
-        boolean done = downloadingDone || uploadingDone;
+        boolean done = outgoingUpload ? uploadingDone : downloadingDone;
 
-        String localPath = local != null && local.has("path") ? local.get("path").getAsString() : "";
-        if (!localPath.isEmpty()) {
-            String name = transferPaths.get(localPath);
-            if (name != null) transferNames.put(fileId, name);
-        }
+        if (mappedName != null) transferNames.put(fileId, mappedName);
 
         String fileName = transferNames.getOrDefault(fileId, "media");
         TelegramTransport.Listener l = listener;
