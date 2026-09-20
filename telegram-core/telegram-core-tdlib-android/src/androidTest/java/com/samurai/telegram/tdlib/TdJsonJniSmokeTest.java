@@ -25,10 +25,7 @@ public final class TdJsonJniSmokeTest {
                 "optionValueString",
                 option.optString("@type")
         );
-        Assert.assertTrue(
-                "TDLib version must not be empty",
-                option.optString("value").length() > 0
-        );
+        Assert.assertEquals("1.8.67", option.optString("value"));
 
         JsonClient.send(clientId, "{\"@type\":\"getAuthorizationState\"}");
         String update = JsonClient.receive(5.0);
