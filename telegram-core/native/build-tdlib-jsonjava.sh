@@ -25,6 +25,7 @@ docker build \
   --platform linux/amd64 \
   --build-arg COMMIT_HASH="$TDLIB_COMMIT" \
   --build-arg ANDROID_NDK_VERSION="$ANDROID_NDK_VERSION" \
+  --build-arg OPENSSL_VERSION="$OPENSSL_VERSION" \
   --build-arg ANDROID_STL="$ANDROID_STL" \
   --build-arg TDLIB_INTERFACE="$TDLIB_INTERFACE" \
   -f "$WORK_DIR/Dockerfile" \
