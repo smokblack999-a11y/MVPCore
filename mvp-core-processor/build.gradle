@@ -5,19 +5,12 @@ ext.artifactId = 'mvp-core-processor'
 // Publishing is intentionally disabled during CI builds.
 // The former Bintray/Maven publishing scripts are discontinued.
 
-configurations {
-    libraries
-}
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation project(':mvp-core')
-    libraries files('libs/javapoet.jar')
+    implementation 'com.squareup:javapoet:1.11.1'
     implementation 'com.google.auto.service:auto-service:1.0-rc6'
     annotationProcessor 'com.google.auto.service:auto-service:1.0-rc6'
-}
-
-jar {
-    from configurations.libraries.collect { it.isDirectory() ? it : zipTree(it) }
 }
 
 //noinspection GroovyUnusedAssignment
