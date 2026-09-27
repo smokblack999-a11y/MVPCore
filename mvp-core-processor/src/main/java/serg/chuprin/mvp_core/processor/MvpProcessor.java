@@ -29,14 +29,15 @@ import serg.chuprin.mvp_core.annotations.InjectViewState;
 import serg.chuprin.mvp_core.view.MvpView;
 
 /**
- * Really we don't need to @Inject annotation support.
- * This is a little workaround for case when there is no @InjectViewState annotation,
- * but we need to generate ViewStateProvider anyway.
- * It's assumed that Mvp-core can't be used without dagger, so @Inject annotation always present.
+ * Generates MVPCore ViewState/ViewStateProvider sources.
+ *
+ * This processor intentionally handles only @InjectViewState. It must not
+ * claim javax.inject.Inject or any Dagger annotation, otherwise another
+ * annotation processor may be prevented from seeing annotations it owns.
  */
 @AutoService(Processor.class)
 @SuppressWarnings("WeakerAccess")
-@SupportedAnnotationTypes({"serg.chuprin.mvp_core.annotations.InjectViewState", "javax.inject.Inject"})
+@SupportedAnnotationTypes("serg.chuprin.mvp_core.annotations.InjectViewState")
 public class MvpProcessor extends AbstractProcessor {
 
     private static Messager messager;
@@ -54,10 +55,11 @@ public class MvpProcessor extends AbstractProcessor {
     }
 
     private static void message(Diagnostic.Kind kind, Element element, String message, Object... args) {
-        messager.printMessage(
-                kind,
-                String.format(message, args),
-                element);
+        if (element == null) {
+            messager.printMessage(kind, String.format(message, args));
+        } else {
+            messager.printMessage(kind, String.format(message, args), element);
+        }
     }
 
     @Override
@@ -75,7 +77,6 @@ public class MvpProcessor extends AbstractProcessor {
         List<String> generatedViewStates = new ArrayList<>();
 
         for (Element annotatedElem : roundEnv.getElementsAnnotatedWith(InjectViewState.class)) {
-
             if (annotatedElem.getKind().isInterface()) {
                 error(annotatedElem, "Only classes can be annotated with @%s",
                         InjectViewState.class.getSimpleName());
@@ -96,12 +97,8 @@ public class MvpProcessor extends AbstractProcessor {
                         presenterType);
                 return true;
             }
-            ViewStateGenerator generator = new ViewStateGenerator(
-                    viewType,
-                    filer,
-                    typeUtils
-            );
 
+            ViewStateGenerator generator = new ViewStateGenerator(viewType, filer, typeUtils);
             String viewStateClassName = generator.getClassName();
 
             if (!generatedViewStates.contains(viewStateClassName)) {
@@ -109,20 +106,22 @@ public class MvpProcessor extends AbstractProcessor {
                     error(annotatedElem, "Failed to generate viewState: " + viewStateClassName);
                     return true;
                 }
-
                 generatedViewStates.add(viewStateClassName);
             }
             presenterViewParis.add(new Pair<>(presenterType, viewStateClassName));
         }
-        if (!providerGenerated) {
 
+        if (!providerGenerated && !roundEnv.processingOver()) {
             if (!new ViewStateBinderGenerator(filer, presenterViewParis).generate()) {
                 error(null, "Failed to generate MvpViewState provider class");
                 return true;
             }
             providerGenerated = true;
         }
-        return true;
+
+        // Do not claim annotations beyond the processor's own domain. This
+        // keeps javac's processor pipeline composable with Dagger and others.
+        return false;
     }
 
     @Override
@@ -131,7 +130,6 @@ public class MvpProcessor extends AbstractProcessor {
     }
 
     private TypeElement getViewType(TypeElement presenterType) {
-
         TypeElement viewType = null;
 
         try {
@@ -153,14 +151,8 @@ public class MvpProcessor extends AbstractProcessor {
         }
 
         if (viewType != null) {
-
-            if (viewFromType != null) {
-                checkViews(presenterType, viewType, viewFromType);
-            }
-
-            if (viewFromSuperclass != null) {
-                checkViews(presenterType, viewType, viewFromSuperclass);
-            }
+            if (viewFromType != null) checkViews(presenterType, viewType, viewFromType);
+            if (viewFromSuperclass != null) checkViews(presenterType, viewType, viewFromSuperclass);
             return viewType;
         }
         return viewFromType == null ? viewFromSuperclass : viewFromType;
@@ -172,17 +164,11 @@ public class MvpProcessor extends AbstractProcessor {
         }
     }
 
-    /**
-     * @param presenterType typeElement of presenter
-     * @return TypeElement for View : MvpView or null if not found
-     */
     private TypeElement getViewFromPresenterTypeParams(TypeElement presenterType) {
-
         for (TypeParameterElement typeParam : presenterType.getTypeParameters()) {
             for (TypeMirror bound : typeParam.getBounds()) {
-
                 Element possibleViewType = typeUtils.asElement(bound);
-                if (possibleViewType.toString().contains(MvpView.class.getName())) {
+                if (possibleViewType != null && possibleViewType.toString().contains(MvpView.class.getName())) {
                     return (TypeElement) possibleViewType;
                 }
             }
@@ -190,15 +176,9 @@ public class MvpProcessor extends AbstractProcessor {
         return null;
     }
 
-    /**
-     * @param presenter typeElement of presenter
-     * @return TypeElement for View : MvpView or null if not found
-     */
     private TypeElement getViewFromPresenterSuperclassTypeArg(TypeElement presenter) {
         DeclaredType superclass = (DeclaredType) presenter.getSuperclass();
-
         for (TypeMirror arg : superclass.getTypeArguments()) {
-
             Element possibleView = typeUtils.asElement(arg);
             if (possibleView != null && possibleView instanceof TypeElement
                     && Utils.isImplementingInterface(elemUtils, typeUtils, (TypeElement) possibleView, MvpView.class)) {
@@ -212,8 +192,6 @@ public class MvpProcessor extends AbstractProcessor {
         error(presenter,
                 "You specified view in annotation: " + element1.getSimpleName().toString()
                         + " but it's not subclass of view specified in presenter's parameter: "
-                        + element2.getSimpleName().toString()
-                , presenter);
+                        + element2.getSimpleName().toString(), presenter);
     }
-
 }

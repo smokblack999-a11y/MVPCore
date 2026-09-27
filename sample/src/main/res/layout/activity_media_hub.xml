@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="MEDIA HUB"
+        android:textSize="26sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/mediaStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="GPS: initializing"
+        android:textSize="16sp" />
+
+    <Button android:id="@+id/takePhoto" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="CAMERA" />
+    <Button android:id="@+id/openGallery" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="GALLERY" />
+    <Button android:id="@+id/refreshGps" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="EXACT GPS" />
+    <Button android:id="@+id/sendTelegram" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="SEND TO TELEGRAM" />
+</LinearLayout>

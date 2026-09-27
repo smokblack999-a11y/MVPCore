@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Sample</string>
+    <string name="media_hub_title">Media Hub</string>
+    <string name="camera_action">Camera</string>
+    <string name="gallery_action">Gallery</string>
+    <string name="gps_action">Exact GPS</string>
+    <string name="telegram_action">Send to Telegram</string>
 </resources>

@@ -1,8 +1,10 @@
 package serg.chuprin.sample;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.view.View;
 
 import serg.chuprin.sample.repositories.list.view.RepositoriesListFragment;
 
@@ -19,6 +21,12 @@ public class MainActivity extends AppCompatActivity {
                     .addToBackStack(null)
                     .commit();
         }
+        findViewById(R.id.openMediaHub).setOnClickListener(v -> openMediaHub());
+        setTitle("MVPCore • Media Ready");
+    }
+
+    private void openMediaHub() {
+        startActivity(new Intent(this, media.MediaHubActivity.class));
     }
 
     @Override
