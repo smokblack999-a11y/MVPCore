@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 8
         uses: actions/setup-java@v5
@@ -27,22 +29,75 @@ jobs:
           java-version: '8'
           architecture: x64
 
-      - name: Make Gradle executable
+      - name: Prepare Gradle
         run: chmod +x ./gradlew
 
-      - name: Show environment
+      - name: Verify checkout and Gradle layout
+        shell: bash
         run: |
+          set -euxo pipefail
+
+          echo "=== Git ==="
+          git rev-parse --show-toplevel
+          git rev-parse HEAD
+          git branch --show-current || true
+
+          echo "=== Repository root ==="
+          find . -maxdepth 2 -type f             \( -name 'settings.gradle'             -o -name 'settings.gradle.kts'             -o -name 'gradle-wrapper.properties' \)             -print
+
+          echo "=== All Gradle settings files ==="
+          find . -type f             \( -name 'settings.gradle'             -o -name 'settings.gradle.kts' \)             -print
+
+          echo "=== RepositoriesMode references ==="
+          grep -RIn --exclude-dir=.git             'RepositoriesMode' . || true
+
+          echo "=== Root settings.gradle ==="
+          if [ -f settings.gradle ]; then
+            sed -n '1,160p' settings.gradle
+          fi
+
+          echo "=== Wrapper ==="
+          grep '^distributionUrl='             gradle/wrapper/gradle-wrapper.properties
+
+          echo "=== Unexpected telegram-core ==="
+          if [ -d telegram-core ]; then
+            find telegram-core -maxdepth 3 -type f -print
+          else
+            echo "telegram-core directory does not exist in this checkout"
+          fi
+
+      - name: Show Java and Gradle versions
+        shell: bash
+        run: |
+          set -euxo pipefail
           java -version
           ./gradlew --version
 
       - name: Build and test
-        run: ./gradlew clean build --stacktrace --warning-mode all
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./gradlew clean build --stacktrace --warning-mode all
 
       - name: Assemble sample debug APK
-        run: ./gradlew :sample:assembleDebug --stacktrace
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./gradlew :sample:assembleDebug --stacktrace
 
       - name: Verify sample debug APK
-        run: test -s sample/build/outputs/apk/debug/sample-debug.apk
+        shell: bash
+        run: |
+          set -euxo pipefail
+          APK="sample/build/outputs/apk/debug/sample-debug.apk"
+
+          test -f "$APK"
+          test -s "$APK"
+
+          echo "APK:"
+          ls -lh "$APK"
+
+          file "$APK"
 
       - name: Upload build outputs
         if: always()
