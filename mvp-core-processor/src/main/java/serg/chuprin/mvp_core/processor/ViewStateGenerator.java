@@ -1,6 +1,7 @@
 package serg.chuprin.mvp_core.processor;
 
 import com.squareup.javapoet.AnnotationSpec;
+import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
@@ -11,6 +12,7 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
+import com.squareup.javapoet.WildcardTypeName;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
@@ -453,12 +455,12 @@ class ViewStateGenerator {
         for (Map.Entry<String, String> entry : typesMap.entrySet()) {
 
             if (typeStr.equals(entry.getKey())) {
-                return TypeName.get(entry.getValue());
+                return parseTypeName(entry.getValue());
             }
             replacementBundles.addAll(findGenericTypes(typeStr, entry.getKey(), entry.getValue()));
         }
         if (!replacementBundles.isEmpty()) {
-            return TypeName.get(replaceGenericWithArgs(typeStr, replacementBundles));
+            return parseTypeName(replaceGenericWithArgs(typeStr, replacementBundles));
         }
         return TypeName.get(mirror);
     }
@@ -468,6 +470,69 @@ class ViewStateGenerator {
      * @param arg     generic type: MODEL
      * @param value   generic type argument to replace: java.lang.Boolean
      */
+    private TypeName parseTypeName(String type) {
+        String value = type.trim();
+
+        if (value.endsWith("[]")) {
+            return ArrayTypeName.of(parseTypeName(value.substring(0, value.length() - 2)));
+        }
+
+        if ("boolean".equals(value)) return TypeName.BOOLEAN;
+        if ("byte".equals(value)) return TypeName.BYTE;
+        if ("char".equals(value)) return TypeName.CHAR;
+        if ("double".equals(value)) return TypeName.DOUBLE;
+        if ("float".equals(value)) return TypeName.FLOAT;
+        if ("int".equals(value)) return TypeName.INT;
+        if ("long".equals(value)) return TypeName.LONG;
+        if ("short".equals(value)) return TypeName.SHORT;
+        if ("void".equals(value)) return TypeName.VOID;
+
+        if (value.startsWith("? extends ")) {
+            return WildcardTypeName.subtypeOf(parseTypeName(value.substring("? extends ".length())));
+        }
+        if (value.startsWith("? super ")) {
+            return WildcardTypeName.supertypeOf(parseTypeName(value.substring("? super ".length())));
+        }
+        if ("?".equals(value)) {
+            return WildcardTypeName.subtypeOf(TypeName.OBJECT);
+        }
+
+        int genericStart = value.indexOf('<');
+        if (genericStart == -1 || !value.endsWith(">")) {
+            return ClassName.bestGuess(value);
+        }
+
+        String rawType = value.substring(0, genericStart).trim();
+        String arguments = value.substring(genericStart + 1, value.length() - 1);
+
+        List<TypeName> typeArguments = new ArrayList<>();
+        int depth = 0;
+        int start = 0;
+
+        for (int i = 0; i < arguments.length(); i++) {
+            char ch = arguments.charAt(i);
+            if (ch == '<') depth++;
+            else if (ch == '>') depth--;
+            else if (ch == ',' && depth == 0) {
+                typeArguments.add(parseTypeName(arguments.substring(start, i)));
+                start = i + 1;
+            }
+        }
+
+        if (start < arguments.length()) {
+            typeArguments.add(parseTypeName(arguments.substring(start)));
+        }
+
+        TypeName raw = parseTypeName(rawType);
+        if (!(raw instanceof ClassName)) {
+            throw new IllegalArgumentException("Parameterized type must have a class name: " + value);
+        }
+
+        return ParameterizedTypeName.get(
+                (ClassName) raw,
+                typeArguments.toArray(new TypeName[0]));
+    }
+
     private List<ReplacementBundle> findGenericTypes(String typeStr, String arg, String value) {
         List<ReplacementBundle> bundles = new LinkedList<>();
 
