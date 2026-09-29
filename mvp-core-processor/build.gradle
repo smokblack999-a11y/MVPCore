@@ -10,12 +10,12 @@ configurations {
 }
 
 dependencies {
-    // Use JavaPoet 1.13.0 consistently with the Dagger processor.
-    // The legacy bundled javapoet.jar has been removed from libs/.
+    // The legacy bundled javapoet.jar was removed because it conflicts
+    // with the API expected by Dagger 2.28.3.
+    implementation 'com.squareup:javapoet:1.13.0'
     libraries 'com.squareup:javapoet:1.13.0'
 
     implementation project(':mvp-core')
-    implementation 'com.squareup:javapoet:1.13.0'
     implementation 'com.google.auto.service:auto-service:1.0-rc6'
     annotationProcessor 'com.google.auto.service:auto-service:1.0-rc6'
 }
@@ -24,5 +24,7 @@ jar {
     from configurations.libraries.collect { it.isDirectory() ? it : zipTree(it) }
 }
 
+//noinspection GroovyUnusedAssignment
 sourceCompatibility = JavaVersion.VERSION_1_8
+//noinspection GroovyUnusedAssignment
 targetCompatibility = JavaVersion.VERSION_1_8
