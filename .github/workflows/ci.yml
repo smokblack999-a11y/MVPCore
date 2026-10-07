@@ -73,6 +73,12 @@ jobs:
           java -version
           ./gradlew --version
 
+      - name: Build standalone Telegram Core
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./gradlew -p telegram-core clean build --stacktrace --warning-mode all
+
       - name: Build and test
         shell: bash
         run: |
