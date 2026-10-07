@@ -1,0 +1,15 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'serg.chuprin.telegram'
+version = '0.1.0-SNAPSHOT'
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+repositories { mavenCentral() }
+
+java { withSourcesJar() }
+
+jar { manifest { attributes('Automatic-Module-Name': 'serg.chuprin.telegram.core') } }
